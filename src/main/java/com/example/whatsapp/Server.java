@@ -1,7 +1,8 @@
 package com.example.whatsapp;
 
 import java.io.*;
-import java.net.*;
+import java.net.URL;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -16,6 +17,13 @@ public class Server extends Application {
     public void start(Stage stage) throws IOException {
 
         Scene scene = new Scene(new Controlserver(20));
+        URL cssURL = getClass().getResource("style.css");
+        if (cssURL == null) {
+            System.out.println("Fichier CSS introuvable !");
+        } else {
+            System.out.println("Fichier CSS chargé : " + cssURL);
+            scene.getStylesheets().add(cssURL.toExternalForm());
+        }
         stage.setTitle("Hello!");
         stage.setHeight(largeur);
         stage.setWidth(longueur);

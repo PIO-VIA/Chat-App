@@ -1,0 +1,15 @@
+.tout{
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #99ccff);
+}
+
+.button {
+    -fx-background-color: #90caf9; /* Fond bleu clair */
+    -fx-text-fill: #ffffff;        /* Texte blanc */
+    -fx-background-radius: 50%;   /* Boutons arrondis */
+    -fx-border-color: transparent;
+    -fx-cursor: hand;             /* Changer le curseur au survol */
+    -fx-pref-width: 40;           /* Largeur fixe */
+    -fx-pref-height: 40;          /* Hauteur fixe */
+    -fx-padding: 5;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 3); /* Ombre */
+}
