@@ -1,15 +1,62 @@
 .tout{
-    -fx-background-color: linear-gradient(to bottom, #ffffff, #99ccff);
+    -fx-background-color: #2c3e50;
+    -fx-font-family : "Arial";
 }
 
-.button {
-    -fx-background-color: #90caf9; /* Fond bleu clair */
-    -fx-text-fill: #ffffff;        /* Texte blanc */
-    -fx-background-radius: 50%;   /* Boutons arrondis */
-    -fx-border-color: transparent;
-    -fx-cursor: hand;             /* Changer le curseur au survol */
-    -fx-pref-width: 40;           /* Largeur fixe */
-    -fx-pref-height: 40;          /* Hauteur fixe */
-    -fx-padding: 5;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 3); /* Ombre */
+.sidebar{
+    -fx-background-color: #1e2a38;
+    -fx-padding : 15px;
+}
+
+.search-box{
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-background-radius : 5px;
+    -fx-padding:8px
+}
+
+.search-field{
+    -fx-background-color: transparent;
+    -fx-border-color: black;
+    -fx-border-width:1px;
+    -fx-border-raduis: 15px;
+    -fx-padding: 5px;
+    -fx-text-fill: white;
+}
+
+/*fenetre de chat*/
+.chat-container{
+    -fx-background-color:#ecf0f1;
+    -fx-padding: 15px;
+}
+.chat-header {
+    -fx-background-color:white;
+    -fx-padding: 15px;
+    -fx-border-color: #ddd;
+    -fx-border-with:0 0 1px 0;
+}
+.chat-header .name {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.send{
+    -fx-background-color:#2ecc71;
+    -fx-text-fill: white;
+    -fx-padding: 10px 15px;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.input{
+    -fx-background-color:   #ecf0f1;
+    -fx-border-radius: 5px;
+    -fx-padding: 8px;
+    -fx-border-width:0;
+}
+
+.tools{
+    -fx-background-color: white;
+}
+.gear{
+    -fx-background-image: url("phone.png")
 }

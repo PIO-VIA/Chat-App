@@ -10,8 +10,8 @@ import javafx.stage.Stage;
 
 
 public class Server extends Application {
-    private final double longueur =640;
-    private final double largeur =480;
+    private final double longueur =840;
+    private final double largeur =580;
 
     @Override
     public void start(Stage stage) throws IOException {
