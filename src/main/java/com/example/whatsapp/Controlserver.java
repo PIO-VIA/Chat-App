@@ -4,10 +4,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.util.Callback;
 
 
 public class Controlserver  extends BorderPane {
@@ -30,17 +32,49 @@ public class Controlserver  extends BorderPane {
         searchBox.setPadding(new Insets(20));
 
         // Liste des conversations
-        ScrollPane chatListScroll = new ScrollPane();
-        VBox chatList = new VBox(5);
-        chatList.setPadding(new Insets(10));
+
 
         // Ajout de conversations fictives
-        for (int i = 1; i <= 10; i++) {
-            chatList.getChildren().add(createChatItem("Contact " + i, "Dernier message...", "10:30"));
-        }
 
-        chatListScroll.setContent(chatList);
-        leftPanel.getChildren().addAll(searchBox, chatListScroll);
+
+            // Créer une ListView pour afficher les contacts
+            ListView<Contact> contactListView = new ListView<>();
+            contactListView.setCellFactory(new Callback<>() {
+                @Override
+                public ListCell<Contact> call(ListView<Contact> param) {
+                    return new ContactListCell();
+                }
+            });
+
+            // Ajouter des contacts fictifs
+            contactListView.getItems().addAll(
+                    new Contact("Alice", "En ligne"),
+                    new Contact("Bob", " 2 heures"),
+                    new Contact("Charlie", "En ligne"),
+                    new Contact("Alice", "En ligne"),
+                    new Contact("Bob", " 2 heures"),
+                    new Contact("Alice", "En ligne"),
+                    new Contact("Bob", " 2 heures"),
+                    new Contact("Alice", "En ligne"),
+                    new Contact("Bob", " 2 heures")
+            );
+
+            // Gérer le clic sur un contact
+            contactListView.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+
+                    Contact selectedContact = contactListView.getSelectionModel().getSelectedItem();
+                    if (selectedContact != null) {
+                        System.out.println("Contact sélectionné : " + selectedContact.getName());
+                    }
+                }
+            });
+            //chatList.getChildren().addAll(contactListView);
+        /*for (int i = 1; i <= 10; i++) {
+            chatList.getChildren().add(createChatItem("Contact " + i, "Dernier message...", "10:30"));
+        }*/
+
+        leftPanel.getChildren().addAll(searchBox, contactListView);
 
         // -----------------------------------------------
         // Partie CENTRALE (Conversation active)
@@ -77,6 +111,7 @@ public class Controlserver  extends BorderPane {
         inputBox.setPadding(new Insets(10));
         TextField messageField = new TextField();
         Button sendButton = new Button("Envoyer");
+        Button sendFile= new Button("fichier");
 
         sendButton.setOnAction(e -> {
             if (!messageField.getText().isEmpty()) {
@@ -85,7 +120,7 @@ public class Controlserver  extends BorderPane {
             }
         });
 
-        inputBox.getChildren().addAll(messageField, sendButton);
+        inputBox.getChildren().addAll(messageField, sendButton, sendFile);
 
         // Assemblage du centre
         centerPanel.setTop(header);
