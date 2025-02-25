@@ -16,7 +16,7 @@ public class Server extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
-        Scene scene = new Scene(new Controlserver(20));
+        Scene scene = new Scene(new Controlserver());
         URL cssURL = getClass().getResource("style.css");
         if (cssURL == null) {
             System.out.println("Fichier CSS introuvable !");
