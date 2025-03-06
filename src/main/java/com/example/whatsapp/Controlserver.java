@@ -12,9 +12,10 @@ import javafx.scene.paint.Color;
 import javafx.util.Callback;
 
 
+
 public class Controlserver  extends BorderPane {
 
-    public Controlserver(){
+    public Controlserver() {
 
         this.setStyle("-fx-background-color: #f0f0f0;");
 
@@ -37,39 +38,39 @@ public class Controlserver  extends BorderPane {
         // Ajout de conversations fictives
 
 
-            // Créer une ListView pour afficher les contacts
-            ListView<Contact> contactListView = new ListView<>();
-            contactListView.setCellFactory(new Callback<>() {
-                @Override
-                public ListCell<Contact> call(ListView<Contact> param) {
-                    return new ContactListCell();
+        // Créer une ListView pour afficher les contacts
+        ListView<Contact> contactListView = new ListView<>();
+        contactListView.setCellFactory(new Callback<>() {
+            @Override
+            public ListCell<Contact> call(ListView<Contact> param) {
+                return new ContactListCell();
+            }
+        });
+
+        // Ajouter des contacts fictifs
+        contactListView.getItems().addAll(
+                new Contact("Alice", "En ligne"),
+                new Contact("Bob", " 2 heures"),
+                new Contact("Charlie", "En ligne"),
+                new Contact("Alice", "En ligne"),
+                new Contact("Bob", " 2 heures"),
+                new Contact("Alice", "En ligne"),
+                new Contact("Bob", " 2 heures"),
+                new Contact("Alice", "En ligne"),
+                new Contact("Bob", " 2 heures")
+        );
+
+        // Gérer le clic sur un contact
+        contactListView.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+
+                Contact selectedContact = contactListView.getSelectionModel().getSelectedItem();
+                if (selectedContact != null) {
+                    System.out.println("Contact sélectionné : " + selectedContact.getName());
                 }
-            });
-
-            // Ajouter des contacts fictifs
-            contactListView.getItems().addAll(
-                    new Contact("Alice", "En ligne"),
-                    new Contact("Bob", " 2 heures"),
-                    new Contact("Charlie", "En ligne"),
-                    new Contact("Alice", "En ligne"),
-                    new Contact("Bob", " 2 heures"),
-                    new Contact("Alice", "En ligne"),
-                    new Contact("Bob", " 2 heures"),
-                    new Contact("Alice", "En ligne"),
-                    new Contact("Bob", " 2 heures")
-            );
-
-            // Gérer le clic sur un contact
-            contactListView.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
-
-                    Contact selectedContact = contactListView.getSelectionModel().getSelectedItem();
-                    if (selectedContact != null) {
-                        System.out.println("Contact sélectionné : " + selectedContact.getName());
-                    }
-                }
-            });
-            //chatList.getChildren().addAll(contactListView);
+            }
+        });
+        //chatList.getChildren().addAll(contactListView);
         /*for (int i = 1; i <= 10; i++) {
             chatList.getChildren().add(createChatItem("Contact " + i, "Dernier message...", "10:30"));
         }*/
@@ -111,7 +112,7 @@ public class Controlserver  extends BorderPane {
         inputBox.setPadding(new Insets(10));
         TextField messageField = new TextField();
         Button sendButton = new Button("Envoyer");
-        Button sendFile= new Button("fichier");
+        Button sendFile = new Button("fichier");
 
         sendButton.setOnAction(e -> {
             if (!messageField.getText().isEmpty()) {
@@ -133,7 +134,6 @@ public class Controlserver  extends BorderPane {
         this.setLeft(leftPanel);
         this.setCenter(centerPanel);
     }
-
     // Crée une bulle de message
     private HBox createMessageBubble(String text, boolean isUser) {
         Label messageLabel = new Label(text);
