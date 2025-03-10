@@ -3,18 +3,22 @@ package com.example.whatsapp;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.Stage;
 import javafx.util.Callback;
-
-
+import java.io.IOException;
 
 public class Controlserver  extends BorderPane {
-
+    private SocketManager socketManager;
+    private MessageSenderThread messageSender;
+    private MessageReceiverThread messageReceiver;
+    private FileSenderThread fileSender;
+    private FileReceiverThread fileReceiver;
     public Controlserver() {
 
         this.setStyle("-fx-background-color: #f0f0f0;");
@@ -31,12 +35,9 @@ public class Controlserver  extends BorderPane {
         searchField.setPromptText("Rechercher ou démarrer une discussion");
         HBox searchBox = new HBox(searchField);
         searchBox.setPadding(new Insets(20));
-
         // Liste des conversations
 
-
         // Ajout de conversations fictives
-
 
         // Créer une ListView pour afficher les contacts
         ListView<Contact> contactListView = new ListView<>();
@@ -70,13 +71,8 @@ public class Controlserver  extends BorderPane {
                 }
             }
         });
-        //chatList.getChildren().addAll(contactListView);
-        /*for (int i = 1; i <= 10; i++) {
-            chatList.getChildren().add(createChatItem("Contact " + i, "Dernier message...", "10:30"));
-        }*/
 
         leftPanel.getChildren().addAll(searchBox, contactListView);
-
         // -----------------------------------------------
         // Partie CENTRALE (Conversation active)
         // -----------------------------------------------
@@ -84,14 +80,26 @@ public class Controlserver  extends BorderPane {
         centerPanel.setStyle("-fx-background-color: #efeae2;");
 
         // En-tête de conversation
+        SocketManager socketManager = new SocketManager();
+        // Bouton pour ouvrir la fenêtre de connexion
+        Button openDialogButton = new Button("Ouvrir la fenêtre de connexion");
+        openDialogButton.setOnAction(e -> {
+            ConnectionDialog dialog = new ConnectionDialog(socketManager);
+            Stage dialogStage = new Stage();
+            dialog.start(dialogStage);
+        });
+
+        // Mise en page
+        StackPane root = new StackPane();
+        root.getChildren().add(openDialogButton);
         HBox header = new HBox(10);
         header.setStyle("-fx-background-color: #f0f2f5; -fx-padding: 10;");
         header.getChildren().addAll(
                 new Label("Contact 1"),
                 new Button("Appel"),
-                new Button("Infos")
+                new Button("Infos"),root
+                
         );
-
         // Zone de messages
         ScrollPane messageScroll = new ScrollPane();
         VBox messageContainer = new VBox(10);
@@ -120,14 +128,11 @@ public class Controlserver  extends BorderPane {
                 messageField.clear();
             }
         });
-
         inputBox.getChildren().addAll(messageField, sendButton, sendFile);
-
         // Assemblage du centre
         centerPanel.setTop(header);
         centerPanel.setCenter(messageScroll);
         centerPanel.setBottom(inputBox);
-
         // -----------------------------------------------
         // Configuration finale
         // -----------------------------------------------
@@ -139,20 +144,16 @@ public class Controlserver  extends BorderPane {
         Label messageLabel = new Label(text);
         messageLabel.setPadding(new Insets(10));
         messageLabel.setMaxWidth(400);
-
         String style = isUser ?
                 "-fx-background-color: #d9fdd3; -fx-background-radius: 15;" :
                 "-fx-background-color: white; -fx-background-radius: 15;";
 
         messageLabel.setStyle(style);
-
         HBox container = new HBox();
         container.setPadding(new Insets(5));
         container.getChildren().add(messageLabel);
-
         if (isUser) container.setAlignment(Pos.CENTER_RIGHT);
         else container.setAlignment(Pos.CENTER_LEFT);
-
         return container;
     }
 
@@ -160,20 +161,15 @@ public class Controlserver  extends BorderPane {
     private HBox createChatItem(String name, String lastMessage, String time) {
         Label nameLabel = new Label(name);
         nameLabel.setStyle("-fx-font-weight: bold;");
-
         Label messageLabel = new Label(lastMessage);
         messageLabel.setTextFill(Color.GRAY);
-
         VBox textContainer = new VBox(3, nameLabel, messageLabel);
         textContainer.setPadding(new Insets(5));
-
         Label timeLabel = new Label(time);
         timeLabel.setTextFill(Color.GRAY);
-
         HBox chatItem = new HBox(10, new CircleAvatar(), textContainer, timeLabel);
         chatItem.setPadding(new Insets(5));
         chatItem.setAlignment(Pos.CENTER_LEFT);
-
         return chatItem;
     }
 }

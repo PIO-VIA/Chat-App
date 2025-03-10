@@ -6,8 +6,6 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-
-
 public class Server extends Application {
     private final double longueur =840;
     private final double largeur =580;
