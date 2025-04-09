@@ -1,10 +1,13 @@
 package org.personnal.serveur;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.personnal.serveur.protocol.PeerRequest;
 import org.personnal.serveur.protocol.PeerResponse;
 import org.personnal.serveur.protocol.RequestType;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,11 +15,13 @@ import java.util.Scanner;
 
 public class TestClient {
 
+    private static final Gson gson = new Gson();
+
     public static void main(String[] args) {
         try (
                 Socket socket = new Socket("localhost", 5000);
-                ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
-                ObjectInputStream input = new ObjectInputStream(socket.getInputStream());
+                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                BufferedWriter output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
                 Scanner scanner = new Scanner(System.in)
         ) {
             System.out.println("✅ Connecté au serveur (" + socket.getInetAddress() + ":" + socket.getPort() + ")");
@@ -42,7 +47,7 @@ public class TestClient {
                 }
             }
 
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             System.err.println("❌ Erreur côté client : " + e.getMessage());
         }
     }
@@ -55,36 +60,30 @@ public class TestClient {
         System.out.print("Votre choix > ");
     }
 
-    private static void handleLogin(ObjectOutputStream output, ObjectInputStream input, Scanner scanner)
-            throws IOException, ClassNotFoundException {
+    private static void handleLogin(BufferedWriter output, BufferedReader input, Scanner scanner)
+            throws IOException {
         Map<String, String> credentials = getCredentials(scanner);
         PeerRequest request = new PeerRequest(RequestType.LOGIN, credentials);
 
-        output.writeObject(request);
-        output.flush();
-
-        PeerResponse response = (PeerResponse) input.readObject();
+        sendRequest(output, request);
+        PeerResponse response = receiveResponse(input);
         System.out.println(response.isSuccess() ? "✅ " + response.getMessage() : "❌ " + response.getMessage());
     }
 
-    private static void handleRegister(ObjectOutputStream output, ObjectInputStream input, Scanner scanner)
-            throws IOException, ClassNotFoundException {
+    private static void handleRegister(BufferedWriter output, BufferedReader input, Scanner scanner)
+            throws IOException {
         Map<String, String> credentials = getCredentials(scanner);
         PeerRequest request = new PeerRequest(RequestType.REGISTER, credentials);
 
-        output.writeObject(request);
-        output.flush();
-
-        PeerResponse response = (PeerResponse) input.readObject();
+        sendRequest(output, request);
+        PeerResponse response = receiveResponse(input);
         System.out.println(response.isSuccess() ? "✅ " + response.getMessage() : "❌ " + response.getMessage());
     }
 
-    private static void sendQuit(ObjectOutputStream output, ObjectInputStream input)
-            throws IOException, ClassNotFoundException {
-        PeerRequest request = new PeerRequest(RequestType.QUIT, null);
-        output.writeObject(request);
-        output.flush();
-        PeerResponse response = (PeerResponse) input.readObject();
+    private static void sendQuit(BufferedWriter output, BufferedReader input) throws IOException {
+        PeerRequest request = new PeerRequest(RequestType.DISCONNECT, null);
+        sendRequest(output, request);
+        PeerResponse response = receiveResponse(input);
         System.out.println("👋 " + response.getMessage());
     }
 
@@ -95,5 +94,18 @@ public class TestClient {
         System.out.print("Mot de passe : ");
         creds.put("password", scanner.nextLine());
         return creds;
+    }
+
+    private static void sendRequest(BufferedWriter output, PeerRequest request) throws IOException {
+        String json = gson.toJson(request);
+        output.write(json);
+        output.newLine(); // très important pour que le serveur lise la ligne complète
+        output.flush();
+    }
+
+    private static PeerResponse receiveResponse(BufferedReader input) throws IOException {
+        String json = input.readLine();
+        Type responseType = new TypeToken<PeerResponse>(){}.getType();
+        return gson.fromJson(json, responseType);
     }
 }

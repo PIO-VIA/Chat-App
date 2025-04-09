@@ -8,5 +8,10 @@ module org.personnal.serveur {
 
     opens org.personnal.serveur to javafx.fxml;
     exports org.personnal.serveur;
+    exports org.personnal.serveur.model;
+    exports org.personnal.serveur.protocol;
+    exports org.personnal.serveur.network;
+
     opens org.personnal.serveur.protocol to com.google.gson;
+    opens org.personnal.serveur.model to com.google.gson;
 }

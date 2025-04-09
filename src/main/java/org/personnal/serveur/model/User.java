@@ -10,6 +10,8 @@ public class User  implements Serializable {
     private String registered_at;
     private String profil;
 
+    public User() {}
+
     public User(int id,String username, String email, String Password,String registered_at,String profil){
         this.id=id;
         this.username=username;
@@ -41,6 +43,8 @@ public class User  implements Serializable {
     public String getRegistered_at() {return registered_at;}
 
     public String getUsername() {return username;}
+
+    public void setId(int id) {this.id = id;}
 
     public void setProfil(String profil) {this.profil = profil;}
     public void setUsername(String username) { this.username = username; }

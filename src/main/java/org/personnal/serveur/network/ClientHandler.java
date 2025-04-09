@@ -1,5 +1,7 @@
 package org.personnal.serveur.network;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import org.personnal.serveur.auth.IUserService;
 import org.personnal.serveur.auth.UserServiceImpl;
 import org.personnal.serveur.model.User;
@@ -11,11 +13,11 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Map;
 
-
 public class ClientHandler implements Runnable {
 
     private final Socket clientSocket;
     private final IUserService userService = new UserServiceImpl();
+    private final Gson gson = new Gson();
 
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
@@ -24,27 +26,35 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try (
-                ObjectOutputStream output = new ObjectOutputStream(clientSocket.getOutputStream());
-                ObjectInputStream input = new ObjectInputStream(clientSocket.getInputStream())
+                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))
         ) {
             boolean running = true;
 
             while (running) {
-                PeerRequest request = (PeerRequest) input.readObject();
+                String jsonLine = reader.readLine();
+                if (jsonLine == null) break;
 
-                // Ajout de la gestion du type QUIT
-                if (false) {
+                PeerRequest request;
+                try {
+                    request = gson.fromJson(jsonLine, PeerRequest.class);
+                } catch (JsonSyntaxException e) {
+                    System.err.println("❌ Requête JSON invalide : " + e.getMessage());
+                    sendJsonResponse(writer, new PeerResponse(false, "❌ Format JSON invalide"));
+                    continue;
+                }
+
+                if (request.getType() == RequestType.QUIT) {
                     running = false;
-                    output.writeObject(new PeerResponse(true, "👋 Déconnexion réussie"));
+                    sendJsonResponse(writer, new PeerResponse(true, "👋 Déconnexion réussie"));
                     break;
                 }
 
                 PeerResponse response = handleRequest(request);
-                output.writeObject(response);
-                output.flush();
+                sendJsonResponse(writer, response);
             }
 
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             System.err.println("❌ Erreur côté serveur (ClientHandler) : " + e.getMessage());
         } finally {
             try {
@@ -54,6 +64,13 @@ public class ClientHandler implements Runnable {
                 System.err.println("❌ Erreur fermeture socket : " + e.getMessage());
             }
         }
+    }
+
+    private void sendJsonResponse(BufferedWriter writer, PeerResponse response) throws IOException {
+        String jsonResponse = gson.toJson(response);
+        writer.write(jsonResponse);
+        writer.newLine();
+        writer.flush();
     }
 
     private PeerResponse handleRequest(PeerRequest request) {

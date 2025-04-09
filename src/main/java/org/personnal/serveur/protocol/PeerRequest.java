@@ -5,11 +5,8 @@ import java.util.Map;
 
 public class PeerRequest implements Serializable {
 
-
-
-
-    public RequestType type;
-    public Map<String, String> payload;
+    private RequestType type;
+    private Map<String, String> payload;
     public PeerRequest() {}
     public PeerRequest(RequestType type, Map<String, String> payload) {
         this.type = type;
