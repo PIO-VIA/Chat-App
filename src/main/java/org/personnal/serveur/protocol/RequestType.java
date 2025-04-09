@@ -8,6 +8,6 @@ public enum RequestType {
     DISCONNECT,
     SEND_MESSAGE,
     SEND_FILE,
-    QUIT
+
 
 }
