@@ -12,13 +12,21 @@ import org.personnal.serveur.protocol.RequestType;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientHandler implements Runnable {
+
+    private static final Map<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
 
     private final Socket clientSocket;
     private final IUserService userService = new UserServiceImpl();
     private final Gson gson = new Gson();
+    private String username;
+    private BufferedReader reader;
+    private BufferedWriter writer;
 
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
@@ -26,10 +34,10 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        try (
-                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))
-        ) {
+        try {
+            reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+
             boolean running = true;
 
             while (running) {
@@ -41,23 +49,26 @@ public class ClientHandler implements Runnable {
                     request = gson.fromJson(jsonLine, PeerRequest.class);
                 } catch (JsonSyntaxException e) {
                     System.err.println("❌ Requête JSON invalide : " + e.getMessage());
-                    sendJsonResponse(writer, new PeerResponse(false, "❌ Format JSON invalide"));
+                    sendJsonResponse(new PeerResponse(false, "❌ Format JSON invalide"));
                     continue;
                 }
 
                 if (request.getType() == RequestType.DISCONNECT) {
                     running = false;
-                    sendJsonResponse(writer, new PeerResponse(true, "👋 Déconnexion réussie"));
+                    sendJsonResponse(new PeerResponse(true, "👋 Déconnexion réussie"));
                     break;
                 }
 
                 PeerResponse response = handleRequest(request);
-                sendJsonResponse(writer, response);
+                sendJsonResponse(response);
             }
 
         } catch (IOException e) {
             System.err.println("❌ Erreur côté serveur (ClientHandler) : " + e.getMessage());
         } finally {
+            if (username != null) {
+                connectedClients.remove(username);
+            }
             try {
                 clientSocket.close();
                 System.out.println("✅ Connexion fermée avec le client");
@@ -67,7 +78,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void sendJsonResponse(BufferedWriter writer, PeerResponse response) throws IOException {
+    private void sendJsonResponse(PeerResponse response) throws IOException {
         String jsonResponse = gson.toJson(response);
         writer.write(jsonResponse);
         writer.newLine();
@@ -84,6 +95,8 @@ public class ClientHandler implements Runnable {
                 return handleSendMessage(request.getPayload());
             case SEND_FILE:
                 return handleSendFile(request.getPayload());
+            case GET_CONNECTED_USERS:
+                return handleGetConnectedUsers();
             case DISCONNECT:
                 return new PeerResponse(true, "👋 Déconnecté proprement.");
             default:
@@ -97,6 +110,8 @@ public class ClientHandler implements Runnable {
 
         User user = userService.login(username, password);
         if (user != null) {
+            this.username = username;
+            connectedClients.put(username, this);
             return new PeerResponse(true, "✅ Connexion réussie", user);
         } else {
             return new PeerResponse(false, "❌ Identifiants incorrects");
@@ -114,44 +129,57 @@ public class ClientHandler implements Runnable {
             return new PeerResponse(false, "❌ Nom d'utilisateur déjà utilisé ou échec");
         }
     }
+
     private PeerResponse handleSendMessage(Map<String, String> payload) {
         String sender = payload.get("sender");
         String receiver = payload.get("receiver");
         String content = payload.get("content");
-        boolean read= Boolean.parseBoolean(payload.get("read"));
+        boolean read = Boolean.parseBoolean(payload.get("read"));
 
-        Message message = new Message(sender, receiver, content, System.currentTimeMillis(),read);
+        Message message = new Message(sender, receiver, content, System.currentTimeMillis(), read);
 
-        // Ici, vous pouvez ajouter la logique d'envoi ou de stockage des messages,
-        // par exemple dans une base de données ou envoyer le message à un autre client.
-        System.out.println("Message reçu: " + message);
-
-        // Exemple de réponse de succès
-        return new PeerResponse(true, "✅ Message envoyé", message);
+        ClientHandler receiverHandler = connectedClients.get(receiver);
+        if (receiverHandler != null) {
+            try {
+                receiverHandler.sendJsonResponse(
+                        new PeerResponse(true, "📨 Nouveau message reçu", message)
+                );
+                return new PeerResponse(true, "✅ Message délivré à " + receiver, message);
+            } catch (IOException e) {
+                return new PeerResponse(false, "❌ Erreur d’envoi au destinataire : " + e.getMessage());
+            }
+        } else {
+            return new PeerResponse(false, "❌ Utilisateur " + receiver + " non connecté");
+        }
     }
+
+
     private PeerResponse handleSendFile(Map<String, String> payload) {
         String sender = payload.get("sender");
         String receiver = payload.get("receiver");
-        String filePath = payload.get("filePath");
+        String filename = payload.get("filename");
+        String base64Content = payload.get("content");
 
-        File file = new File(filePath);
-        if (!file.exists() || !file.isFile()) {
-            return new PeerResponse(false, "❌ Le fichier n'existe pas");
-        }
-
-        // Lire et envoyer le fichier en morceaux
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] buffer = new byte[8192];  // Buffer pour lire le fichier en morceaux
-            int bytesRead;
-            while ((bytesRead = fis.read(buffer)) != -1) {
-                // Envoyer chaque morceau du fichier (à ajouter en fonction de votre gestion de la communication)
-                // Utilisez `BufferedWriter` ou un autre mécanisme pour envoyer chaque morceau à l'autre client
+        ClientHandler receiverHandler = connectedClients.get(receiver);
+        if (receiverHandler != null) {
+            try {
+                Map<String, String> filePayload = Map.of(
+                        "from", sender,
+                        "filename", filename,
+                        "content", base64Content
+                );
+                PeerResponse response = new PeerResponse(true, "📁 Nouveau fichier de " + sender, filePayload);
+                receiverHandler.sendJsonResponse(response);
+            } catch (IOException e) {
+                return new PeerResponse(false, "❌ Erreur envoi fichier : " + e.getMessage());
             }
-        } catch (IOException e) {
-            return new PeerResponse(false, "❌ Erreur lors de l'envoi du fichier : " + e.getMessage());
         }
 
         return new PeerResponse(true, "✅ Fichier envoyé");
+    }
+    private PeerResponse handleGetConnectedUsers() {
+        return new PeerResponse(true, "👥 Utilisateurs connectés",
+                new ArrayList<>(connectedClients.keySet()));
     }
 
 }

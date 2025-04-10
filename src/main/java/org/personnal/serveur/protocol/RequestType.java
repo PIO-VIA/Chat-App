@@ -4,10 +4,9 @@ package org.personnal.serveur.protocol;
 public enum RequestType {
     REGISTER,
     LOGIN,
-    GET_PEERS,
+    CALL,
     DISCONNECT,
     SEND_MESSAGE,
     SEND_FILE,
-
-
+    GET_CONNECTED_USERS,
 }
