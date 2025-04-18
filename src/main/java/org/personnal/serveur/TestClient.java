@@ -10,6 +10,8 @@ import org.personnal.serveur.protocol.RequestType;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -22,10 +24,11 @@ public class TestClient {
     public static void main(String[] args) {
         try (
                 Socket socket = new Socket("localhost", 5000);
-                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                BufferedWriter output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+                BufferedWriter output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
                 Scanner scanner = new Scanner(System.in)
         ) {
+            socket.setSoTimeout(30000);  // Timeout de 30 secondes
             System.out.println("✅ Connecté au serveur");
 
             boolean running = true;
@@ -103,17 +106,22 @@ public class TestClient {
         // Thread d’écoute des messages entrants
         Thread listenerThread = new Thread(() -> {
             try {
-                while (true) {
-                    String responseJson = input.readLine();
-                    if (responseJson == null) break;
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        String responseJson = input.readLine();
+                        if (responseJson == null) break;
 
-                    PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
-                    if (response.getData() instanceof Map<?, ?> dataMap) {
-                        // Lecture d’un message (convertir manuellement)
-                        System.out.println("📩 Nouveau message : " + dataMap.get("content") +
-                                " (de " + dataMap.get("sender") + ")");
-                    } else {
-                        System.out.println("🧭 Réponse du serveur : " + response.getMessage());
+                        PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
+                        if (response.getData() instanceof Map<?, ?> dataMap) {
+                            // Lecture d’un message (convertir manuellement)
+                            System.out.println("📩 Nouveau message : " + dataMap.get("content") +
+                                    " (de " + dataMap.get("sender") + ")");
+                        } else {
+                            System.out.println("🧭 Réponse du serveur : " + response.getMessage());
+                        }
+                    } catch (SocketTimeoutException e) {
+                        // Timeout atteint, tu peux sortir ou continuer
+                        System.out.println("🕒 Timeout atteint, connexion toujours active.");
                     }
                 }
             } catch (IOException e) {
@@ -130,6 +138,7 @@ public class TestClient {
             if (command.equalsIgnoreCase("disconnect")) {
                 try {
                     sendQuit(output, input);
+                    listenerThread.interrupt(); // 💡 forcer l'arrêt du thread
                     break;
                 } catch (IOException e) {
                     System.err.println("❌ Erreur de déconnexion : " + e.getMessage());

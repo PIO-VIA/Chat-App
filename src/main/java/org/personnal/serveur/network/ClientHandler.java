@@ -9,17 +9,15 @@ import org.personnal.serveur.model.User;
 import org.personnal.serveur.protocol.PeerRequest;
 import org.personnal.serveur.protocol.PeerResponse;
 import org.personnal.serveur.protocol.RequestType;
+import org.personnal.serveur.network.SessionManager;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientHandler implements Runnable {
-
-    private static final Map<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
 
     private final Socket clientSocket;
     private final IUserService userService = new UserServiceImpl();
@@ -67,7 +65,7 @@ public class ClientHandler implements Runnable {
             System.err.println("❌ Erreur côté serveur (ClientHandler) : " + e.getMessage());
         } finally {
             if (username != null) {
-                connectedClients.remove(username);
+                SessionManager.removeUser(username);
             }
             try {
                 clientSocket.close();
@@ -111,7 +109,7 @@ public class ClientHandler implements Runnable {
         User user = userService.login(username, password);
         if (user != null) {
             this.username = username;
-            connectedClients.put(username, this);
+            SessionManager.addUser(username, this);
             return new PeerResponse(true, "✅ Connexion réussie", user);
         } else {
             return new PeerResponse(false, "❌ Identifiants incorrects");
@@ -138,7 +136,7 @@ public class ClientHandler implements Runnable {
 
         Message message = new Message(sender, receiver, content, System.currentTimeMillis(), read);
 
-        ClientHandler receiverHandler = connectedClients.get(receiver);
+        ClientHandler receiverHandler = SessionManager.getUserHandler(receiver);
         if (receiverHandler != null) {
             try {
                 receiverHandler.sendJsonResponse(
@@ -153,14 +151,13 @@ public class ClientHandler implements Runnable {
         }
     }
 
-
     private PeerResponse handleSendFile(Map<String, String> payload) {
         String sender = payload.get("sender");
         String receiver = payload.get("receiver");
         String filename = payload.get("filename");
         String base64Content = payload.get("content");
 
-        ClientHandler receiverHandler = connectedClients.get(receiver);
+        ClientHandler receiverHandler = SessionManager.getUserHandler(receiver);
         if (receiverHandler != null) {
             try {
                 Map<String, String> filePayload = Map.of(
@@ -170,16 +167,30 @@ public class ClientHandler implements Runnable {
                 );
                 PeerResponse response = new PeerResponse(true, "📁 Nouveau fichier de " + sender, filePayload);
                 receiverHandler.sendJsonResponse(response);
+                return new PeerResponse(true, "✅ Fichier délivré à " + receiver);
             } catch (IOException e) {
-                return new PeerResponse(false, "❌ Erreur envoi fichier : " + e.getMessage());
+                return new PeerResponse(false, "❌ Erreur d’envoi de fichier : " + e.getMessage());
             }
+        } else {
+            return new PeerResponse(false, "❌ Utilisateur " + receiver + " non connecté");
         }
-
-        return new PeerResponse(true, "✅ Fichier envoyé");
     }
+
     private PeerResponse handleGetConnectedUsers() {
         return new PeerResponse(true, "👥 Utilisateurs connectés",
-                new ArrayList<>(connectedClients.keySet()));
+                new ArrayList<>(SessionManager.getAllSessions().keySet()));
     }
 
+    // Méthode utilitaire pour envoyer un message texte d'un autre handler.
+    public void sendTextMessage(String fromUsername, String message) {
+        try {
+            Map<String, String> payload = Map.of(
+                    "from", fromUsername,
+                    "content", message
+            );
+            sendJsonResponse(new PeerResponse(true, "💬 Nouveau message reçu", payload));
+        } catch (IOException e) {
+            System.err.println("❌ Erreur envoi message direct : " + e.getMessage());
+        }
+    }
 }
