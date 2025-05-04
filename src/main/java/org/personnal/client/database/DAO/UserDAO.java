@@ -6,8 +6,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class UserDAO {
-    public static void adduser(String username, String email, String pass){
+public class UserDAO implements IUserDAO{
+    @Override
+    public void adduser(String username, String email, String pass){
         String sql="insert into users(username, email, password_hash) values(?, ?, ?)";
         try (Connection conn=DatabaseConnection.connect();
              PreparedStatement stmt= conn.prepareStatement(sql)){

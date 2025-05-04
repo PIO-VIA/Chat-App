@@ -3,8 +3,9 @@ import org.personnal.client.database.DatabaseConnection;
 
 import java.sql.*;
 
-public class MessageDAO {
-    public static void sendmess(int senderId, int receivedId, String content){
+public class MessageDAO implements IMessageDAO{
+    @Override
+    public void sendmess(int senderId, int receivedId, String content){
         String sql="insert into messages(sender_id, received_id, content) values (?, ?, ?)";
         try(Connection conn= DatabaseConnection.connect();
             PreparedStatement stmt= conn.prepareStatement(sql)){
@@ -17,7 +18,8 @@ public class MessageDAO {
             e.printStackTrace();
         }
     }
-    public static void showUserMessages(int userId) {
+    @Override
+    public void showUserMessages(int userId) {
         String sql = "SELECT sender_id, content FROM messages WHERE received_id = ?";
 
         try (Connection conn = DatabaseConnection.connect();
@@ -39,7 +41,8 @@ public class MessageDAO {
             e.printStackTrace();
         }
     }
-    public static String getusername(int userId){
+    @Override
+    public String getusername(int userId){
         try (var conn = DatabaseConnection.connect();
              var stmt = conn.prepareStatement("SELECT username FROM users WHERE id = ?")) {
             stmt.setInt(1, userId);
