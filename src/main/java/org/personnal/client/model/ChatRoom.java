@@ -1,4 +1,4 @@
 package org.personnal.client.model;
 
-public class Conversation {
+public class ChatRoom {
 }

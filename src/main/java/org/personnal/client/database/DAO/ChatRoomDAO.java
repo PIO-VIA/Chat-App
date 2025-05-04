@@ -1,4 +1,4 @@
 package org.personnal.client.database.DAO;
 
-public interface IMessage {
+public class ChatRoomDAO {
 }
