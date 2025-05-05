@@ -23,7 +23,7 @@ public class ChatView {
         HBox header = new HBox();
         header.setPadding(new Insets(10));
         header.setStyle("-fx-background-color: #075E54;");
-        Label usernameLabel = new Label("🟢 Connecté en tant que : " + controller.getCurrentUsername());
+        Label usernameLabel = new Label("Connecté en tant que : " + controller.getCurrentUsername());
         usernameLabel.setTextFill(Color.WHITE);
         usernameLabel.setFont(Font.font(16));
         header.getChildren().add(usernameLabel);
@@ -44,7 +44,7 @@ public class ChatView {
         inputArea.setPadding(new Insets(10));
         inputArea.setStyle("-fx-background-color: #f0f0f0;");
 
-        Button attachFileButton = new Button("📎"); // icône trombone
+        Button attachFileButton = new Button("📎Fichier"); // icône trombone
         attachFileButton.setStyle("-fx-font-size: 16; -fx-background-color: transparent;");
         attachFileButton.setOnAction(e -> controller.handleFileUpload());
 
