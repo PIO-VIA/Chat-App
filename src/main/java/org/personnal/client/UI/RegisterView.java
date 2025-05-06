@@ -20,24 +20,29 @@ import java.util.Map;
 public class RegisterView {
 
     private final MainClient app;
-    private final StackPane layout;
+    private final BorderPane layout;
     private final ClientSocketManager socketManager;
 
     public RegisterView(MainClient app, ClientSocketManager socketManager) {
         this.app = app;
         this.socketManager = socketManager;
-        this.layout = new StackPane();
+        this.layout = new BorderPane();
         initUI();
     }
 
     private void initUI() {
         // Fond bleu pour l'ensemble de l'écran
-        layout.setStyle("-fx-background-color: linear-gradient(to bottom right, #1a6fc7, #2e8ede);");
+        layout.setStyle("-fx-background-color: linear-gradient(to right, #1a6fc7, #2e8ede);");
 
-        // Création du cadre blanc central
-        VBox registerBox = new VBox(20);
+        // Création du cadre blanc central (carré)
+        VBox registerBox = new VBox(15);
         registerBox.setPadding(new Insets(30));
-        registerBox.setMaxWidth(350);
+        registerBox.setMaxWidth(400);
+        registerBox.setMaxHeight(400);
+        registerBox.setMinWidth(350);
+        registerBox.setMinHeight(350);
+        registerBox.setPrefWidth(400);
+        registerBox.setPrefHeight(400);
         registerBox.setAlignment(Pos.CENTER);
         registerBox.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
 
@@ -150,8 +155,10 @@ public class RegisterView {
         // Ajout des éléments dans le conteneur
         registerBox.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, confirmPasswordField, registerBtn, switchToLogin);
 
-        // Ajout du conteneur à la mise en page principale
-        layout.getChildren().add(registerBox);
+        // Centrer le cadre dans la borderpane
+        StackPane centeringPane = new StackPane(registerBox);
+        centeringPane.setPadding(new Insets(20));
+        layout.setCenter(centeringPane);
     }
 
     public Pane getView() {

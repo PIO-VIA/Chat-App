@@ -83,12 +83,14 @@ public class MainClient extends Application {
         initializeAutoRefresh();
 
         // Définir la taille de la fenêtre de connexion/inscription
-        Scene scene = new Scene(root, 450, 600);
+        Scene scene = new Scene(root, 800, 500);
 
         // Configurer la fenêtre principale
         primaryStage.setTitle("Alanya - Connexion");
         primaryStage.setScene(scene);
-        primaryStage.setResizable(false); // Empêcher le redimensionnement
+        primaryStage.setResizable(true); // Permettre le redimensionnement
+        primaryStage.setMinWidth(700);
+        primaryStage.setMinHeight(500);
 
         // Centrer la fenêtre sur l'écran
         primaryStage.centerOnScreen();
@@ -104,13 +106,13 @@ public class MainClient extends Application {
         root.getChildren().setAll(loginView.getView());
         primaryStage.setTitle("Alanya - Connexion");
 
-        // Transition de la fenêtre si nécessaire
-        if (primaryStage.getScene().getWidth() != 450 || primaryStage.getScene().getHeight() != 600) {
-            Platform.runLater(() -> {
-                primaryStage.setWidth(450);
-                primaryStage.setHeight(600);
-                primaryStage.centerOnScreen();
-            });
+        // Maintenir la taille actuelle sans transitions forcées
+        if (primaryStage.getScene() != null && primaryStage.getScene().getWindow() != null) {
+            // S'assurer seulement que la fenêtre respecte les dimensions minimales
+            double width = Math.max(primaryStage.getWidth(), 700);
+            double height = Math.max(primaryStage.getHeight(), 500);
+            primaryStage.setWidth(width);
+            primaryStage.setHeight(height);
         }
     }
 
@@ -119,13 +121,13 @@ public class MainClient extends Application {
         root.getChildren().setAll(registerView.getView());
         primaryStage.setTitle("Alanya - Inscription");
 
-        // Transition de la fenêtre si nécessaire
-        if (primaryStage.getScene().getWidth() != 450 || primaryStage.getScene().getHeight() != 600) {
-            Platform.runLater(() -> {
-                primaryStage.setWidth(450);
-                primaryStage.setHeight(600);
-                primaryStage.centerOnScreen();
-            });
+        // Maintenir la taille actuelle sans transitions forcées
+        if (primaryStage.getScene() != null && primaryStage.getScene().getWindow() != null) {
+            // S'assurer seulement que la fenêtre respecte les dimensions minimales
+            double width = Math.max(primaryStage.getWidth(), 700);
+            double height = Math.max(primaryStage.getHeight(), 500);
+            primaryStage.setWidth(width);
+            primaryStage.setHeight(height);
         }
     }
 

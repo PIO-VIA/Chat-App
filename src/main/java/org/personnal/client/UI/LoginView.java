@@ -20,24 +20,29 @@ import java.util.Map;
 public class LoginView {
 
     private final MainClient app;
-    private final StackPane layout;
+    private final BorderPane layout;
     private final ClientSocketManager socketManager;
 
     public LoginView(MainClient app, ClientSocketManager socketManager) {
         this.app = app;
         this.socketManager = socketManager;
-        this.layout = new StackPane();
+        this.layout = new BorderPane();
         initUI();
     }
 
     private void initUI() {
         // Fond bleu pour l'ensemble de l'écran
-        layout.setStyle("-fx-background-color: linear-gradient(to bottom right, #1a6fc7, #2e8ede);");
+        layout.setStyle("-fx-background-color: linear-gradient(to right, #1a6fc7, #2e8ede);");
 
-        // Création du cadre blanc central
-        VBox loginBox = new VBox(20);
+        // Création du cadre blanc central (carré)
+        VBox loginBox = new VBox(15);
         loginBox.setPadding(new Insets(30));
-        loginBox.setMaxWidth(350);
+        loginBox.setMaxWidth(400);
+        loginBox.setMaxHeight(400);
+        loginBox.setMinWidth(350);
+        loginBox.setMinHeight(350);
+        loginBox.setPrefWidth(400);
+        loginBox.setPrefHeight(400);
         loginBox.setAlignment(Pos.CENTER);
         loginBox.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
 
@@ -139,8 +144,10 @@ public class LoginView {
         // Ajout des éléments dans le conteneur
         loginBox.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, loginBtn, switchToRegister);
 
-        // Ajout du conteneur à la mise en page principale
-        layout.getChildren().add(loginBox);
+        // Centrer le cadre dans la borderpane
+        StackPane centeringPane = new StackPane(loginBox);
+        centeringPane.setPadding(new Insets(20));
+        layout.setCenter(centeringPane);
     }
 
     public Pane getView() {
