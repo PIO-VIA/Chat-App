@@ -3,7 +3,7 @@
  * Pattern State pour gérer les différents états d'un utilisateur
  */
 
-package org.personnal.client.model;
+package org.personnal.client.model.user;
 
 public interface IUserStatus {
     boolean canSendMessage();

@@ -1,4 +1,4 @@
-package org.personnal.client.model;
+package org.personnal.client.model.user;
 
 public enum UserStatus implements IUserStatus {
     ONLINE {

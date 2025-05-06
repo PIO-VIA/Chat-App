@@ -5,7 +5,7 @@
  * Utilisation du pattern Builder pour la construction complexe
  */
 
-package org.personnal.client.model;
+package org.personnal.client.model.user;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

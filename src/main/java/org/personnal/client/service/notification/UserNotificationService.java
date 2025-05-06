@@ -1,7 +1,7 @@
 package org.personnal.client.service.notification;
 
-import org.personnal.client.model.IUserObserver;
-import org.personnal.client.model.User;
+import org.personnal.client.model.user.IUserObserver;
+import org.personnal.client.model.user.User;
 
 public class UserNotificationService implements IUserObserver {
     private final INotificationService notificationService;
