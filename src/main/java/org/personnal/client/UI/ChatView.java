@@ -32,7 +32,12 @@ public class ChatView {
         ListView<String> userList = controller.getUserListView();
         userList.setPrefWidth(200);
         userList.setStyle("-fx-background-color: #e0f7fa;");
+        // Ajout d'un titre à la liste
+        Label userListTitle = new Label("Utilisateurs connectés");
+        userListTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-padding: 5;");
 
+        VBox userListBox = new VBox(userListTitle, userList);
+        userListBox.setSpacing(5);
         // Zone messages
         VBox messageArea = controller.getMessageArea();
         ScrollPane scrollPane = new ScrollPane(messageArea);
@@ -60,7 +65,7 @@ public class ChatView {
 
         // Layout principal
         layout.setTop(header);
-        layout.setLeft(userList);
+        layout.setLeft(userListBox);
         layout.setCenter(scrollPane);
         layout.setBottom(inputArea);
     }

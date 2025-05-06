@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DatabaseConnection {
     private static final String URL = "jdbc:sqlite:AlanyaServeur.db";
 
-    public static Connection getConnection() throws SQLException {
+    public static Connection connect() throws SQLException {
         try {
             // Chargement du driver SQLite
             Class.forName("org.sqlite.JDBC");

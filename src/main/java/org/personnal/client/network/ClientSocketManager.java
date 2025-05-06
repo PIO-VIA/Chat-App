@@ -3,10 +3,13 @@ package org.personnal.client.network;
 import com.google.gson.Gson;
 import org.personnal.client.protocol.PeerRequest;
 import org.personnal.client.protocol.PeerResponse;
+import org.personnal.client.protocol.RequestType;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class ClientSocketManager {
     private static ClientSocketManager instance;
@@ -15,9 +18,32 @@ public class ClientSocketManager {
     private BufferedReader input;
     private BufferedWriter output;
     private final Gson gson = new Gson();
-
+    private Consumer<List<String>> usersUpdateListener;
     // Constructeur privé pour singleton
     private ClientSocketManager() {}
+
+    public void setUsersUpdateListener(Consumer<List<String>> listener) {
+        this.usersUpdateListener = listener;
+    }
+
+    public void startListeningThread() {
+        new Thread(() -> {
+            try {
+                while (!socket.isClosed()) {
+                    PeerResponse response = readResponse();
+                    if (response.getType() == RequestType.GET_CONNECTED_USERS && usersUpdateListener != null) {
+                        @SuppressWarnings("unchecked")
+                        List<String> users = (List<String>) response.getData();
+                        usersUpdateListener.accept(users);
+                    }
+                }
+            } catch (IOException e) {
+                if (!socket.isClosed()) {
+                    System.err.println("Erreur dans le thread d'écoute: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
 
     public static ClientSocketManager getInstance() throws IOException {
         if (instance == null) {

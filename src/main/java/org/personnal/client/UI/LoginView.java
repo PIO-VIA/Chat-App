@@ -1,12 +1,13 @@
 package org.personnal.client.UI;
 
-
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import org.personnal.client.MainClient;
 import org.personnal.client.network.ClientSocketManager;
 import org.personnal.client.protocol.PeerRequest;
@@ -19,32 +20,84 @@ import java.util.Map;
 public class LoginView {
 
     private final MainClient app;
-    private final VBox layout;
+    private final StackPane layout;
     private final ClientSocketManager socketManager;
 
     public LoginView(MainClient app, ClientSocketManager socketManager) {
         this.app = app;
         this.socketManager = socketManager;
-        this.layout = new VBox(15);
+        this.layout = new StackPane();
         initUI();
     }
 
     private void initUI() {
-        layout.setPadding(new Insets(30));
-        layout.setAlignment(Pos.CENTER);
-        layout.setStyle("-fx-background-color: #f9f9f9;");
+        // Fond bleu pour l'ensemble de l'écran
+        layout.setStyle("-fx-background-color: linear-gradient(to bottom right, #1a6fc7, #2e8ede);");
 
-        Label title = new Label("🔐 Connexion");
-        title.setFont(Font.font(22));
-        title.setTextFill(Color.web("#333"));
+        // Création du cadre blanc central
+        VBox loginBox = new VBox(20);
+        loginBox.setPadding(new Insets(30));
+        loginBox.setMaxWidth(350);
+        loginBox.setAlignment(Pos.CENTER);
+        loginBox.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
 
+        // Effet d'ombre pour le cadre
+        DropShadow dropShadow = new DropShadow();
+        dropShadow.setRadius(10.0);
+        dropShadow.setOffsetX(0);
+        dropShadow.setOffsetY(0);
+        dropShadow.setColor(Color.color(0, 0, 0, 0.3));
+        loginBox.setEffect(dropShadow);
+
+        // Titre de l'application
+        Label appTitle = new Label("ALANYA");
+        appTitle.setFont(Font.font("Arial", FontWeight.BOLD, 28));
+        appTitle.setTextFill(Color.web("#1a6fc7"));
+
+        // Sous-titre
+        Label subtitle = new Label("Connexion");
+        subtitle.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
+        subtitle.setTextFill(Color.web("#555"));
+
+        // Champ nom d'utilisateur
         TextField usernameField = new TextField();
         usernameField.setPromptText("Nom d'utilisateur");
+        usernameField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
 
+        // Champ mot de passe
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Mot de passe");
+        passwordField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
 
-        Button loginBtn = new Button("Se connecter");
+        // Bouton de connexion
+        Button loginBtn = new Button("SE CONNECTER");
+        loginBtn.setMaxWidth(Double.MAX_VALUE);
+        loginBtn.setStyle(
+                "-fx-background-color: #1a6fc7; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 12px; " +
+                        "-fx-background-radius: 5px;"
+        );
+
+        // Effet hover sur le bouton
+        loginBtn.setOnMouseEntered(e -> loginBtn.setStyle(
+                "-fx-background-color: #0d5fb7; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 12px; " +
+                        "-fx-background-radius: 5px;"
+        ));
+
+        loginBtn.setOnMouseExited(e -> loginBtn.setStyle(
+                "-fx-background-color: #1a6fc7; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 12px; " +
+                        "-fx-background-radius: 5px;"
+        ));
+
+        // Action du bouton de connexion
         loginBtn.setOnAction(e -> {
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();
@@ -76,27 +129,35 @@ public class LoginView {
             }
         });
 
-
-        loginBtn.setMaxWidth(Double.MAX_VALUE);
-        loginBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-
-
-        Label switchToRegister = new Label("Pas encore de compte ? Cliquez ici");
-        switchToRegister.setStyle("-fx-text-fill: #0077cc; -fx-underline: true;");
+        // Lien pour s'inscrire
+        Label switchToRegister = new Label("Pas encore de compte ? Inscrivez-vous");
+        switchToRegister.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;");
+        switchToRegister.setOnMouseEntered(e -> switchToRegister.setStyle("-fx-text-fill: #0d5fb7; -fx-cursor: hand; -fx-underline: true;"));
+        switchToRegister.setOnMouseExited(e -> switchToRegister.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;"));
         switchToRegister.setOnMouseClicked(e -> app.showRegisterView());
 
-        layout.getChildren().addAll(title, usernameField, passwordField, loginBtn, switchToRegister);
+        // Ajout des éléments dans le conteneur
+        loginBox.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, loginBtn, switchToRegister);
+
+        // Ajout du conteneur à la mise en page principale
+        layout.getChildren().add(loginBox);
     }
 
-    public VBox getView() {
+    public Pane getView() {
         return layout;
     }
+
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
+
+        // Style de l'alerte
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.setStyle("-fx-background-color: white;");
+        dialogPane.getStyleClass().add("custom-alert");
+
         alert.showAndWait();
     }
-
 }
