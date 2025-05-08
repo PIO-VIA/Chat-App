@@ -82,6 +82,11 @@ public class ChatController {
             // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste
             users.removeIf(user -> user.equals(currentUsername));
             userList.setAll(users);
+
+            // Si la liste était vide avant et qu'elle ne l'est plus maintenant, afficher un message
+            if (!users.isEmpty()) {
+                addSystemMessage("📋 Liste des utilisateurs mise à jour (" + users.size() + " connecté(s))");
+            }
         });
     }
 
@@ -101,7 +106,23 @@ public class ChatController {
         sendButton.setOnAction(e -> sendMessage());
         messageInput.setOnAction(e -> sendMessage());
 
-        app.setOnUsersUpdated(users -> updateUserList(List.of(users)));
+        // Configurer la sélection d'un utilisateur dans la liste
+        userListView.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null) {
+                selectedUser = newValue;
+                addSystemMessage("💬 Conversation avec " + selectedUser);
+                // Effacer les anciens messages
+                messageArea.getChildren().clear();
+                // Ajouter un message d'info
+                addSystemMessage("📝 Historique de la conversation avec " + selectedUser);
+            }
+        });
+
+        app.setOnUsersUpdated(users -> {
+            if (users != null && users.length > 0) {
+                updateUserList(List.of(users));
+            }
+        });
     }
 
     private void sendMessage() {

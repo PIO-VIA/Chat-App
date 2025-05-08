@@ -19,6 +19,7 @@ public class ClientSocketManager {
     private BufferedWriter output;
     private final Gson gson = new Gson();
     private Consumer<List<String>> usersUpdateListener;
+
     // Constructeur privé pour singleton
     private ClientSocketManager() {}
 
@@ -27,14 +28,30 @@ public class ClientSocketManager {
     }
 
     public void startListeningThread() {
+        System.out.println("Démarrage du thread d'écoute");
         new Thread(() -> {
             try {
                 while (!socket.isClosed()) {
-                    PeerResponse response = readResponse();
+                    String responseJson = input.readLine();
+                    if (responseJson == null) {
+                        System.out.println("Connexion fermée par le serveur");
+                        break;
+                    }
+
+                    System.out.println("Réponse reçue: " + responseJson);
+
+                    PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
+
+                    // Traitement de la réponse selon son type
                     if (response.getType() == RequestType.GET_CONNECTED_USERS && usersUpdateListener != null) {
-                        @SuppressWarnings("unchecked")
-                        List<String> users = (List<String>) response.getData();
-                        usersUpdateListener.accept(users);
+                        try {
+                            @SuppressWarnings("unchecked")
+                            List<String> users = (List<String>) response.getData();
+                            System.out.println("Utilisateurs reçus: " + users);
+                            usersUpdateListener.accept(users);
+                        } catch (ClassCastException e) {
+                            System.err.println("Erreur de casting des données utilisateurs: " + e.getMessage());
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -56,7 +73,7 @@ public class ClientSocketManager {
     private void connect(String host, int port) throws IOException {
         try {
             socket = new Socket(host, port);
-            socket.setSoTimeout(30000);  // Timeout de lecture (30 sec)
+            socket.setSoTimeout(60000);   //Timeout de lecture (60 sec)
             input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
             System.out.println("✅ Connecté au serveur");
@@ -68,12 +85,16 @@ public class ClientSocketManager {
 
     public synchronized void sendRequest(PeerRequest request) throws IOException {
         String json = gson.toJson(request);
+        System.out.println("Envoi de la requête: " + json);
         output.write(json + "\n");
         output.flush();
     }
 
     public synchronized PeerResponse readResponse() throws IOException {
         String responseJson = input.readLine();
+        if (responseJson == null) {
+            throw new IOException("Connexion fermée par le serveur");
+        }
         return gson.fromJson(responseJson, PeerResponse.class);
     }
 

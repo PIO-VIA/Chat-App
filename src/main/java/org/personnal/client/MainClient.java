@@ -30,20 +30,27 @@ public class MainClient extends Application {
     private ClientSocketManager socketManager;
     private Consumer<String[]> onUsersUpdated;
     private Timeline refreshTimeline;
+    private ChatController currentChatController;
 
     public void initializeAutoRefresh() {
-        socketManager.setUsersUpdateListener(this::handleUsersUpdate);
+        try {
+            socketManager = ClientSocketManager.getInstance();
+            socketManager.setUsersUpdateListener(this::handleUsersUpdate);
 
-        refreshTimeline = new Timeline(
-                new KeyFrame(Duration.seconds(5), e -> requestUsers())
-        );
-        refreshTimeline.setCycleCount(Animation.INDEFINITE);
-        refreshTimeline.play();
+            refreshTimeline = new Timeline(
+                    new KeyFrame(Duration.seconds(5), e -> requestUsers())
+            );
+            refreshTimeline.setCycleCount(Animation.INDEFINITE);
+            refreshTimeline.play();
+        } catch (IOException e) {
+            System.err.println("Erreur lors de l'initialisation du rafraîchissement automatique: " + e.getMessage());
+        }
     }
 
     private void handleUsersUpdate(List<String> users) {
         Platform.runLater(() -> {
             if (onUsersUpdated != null) {
+                System.out.println("Mise à jour de la liste des utilisateurs: " + users);
                 onUsersUpdated.accept(users.toArray(new String[0]));
             }
         });
@@ -51,6 +58,7 @@ public class MainClient extends Application {
 
     private void requestUsers() {
         try {
+            System.out.println("Demande de la liste des utilisateurs...");
             PeerRequest request = new PeerRequest(RequestType.GET_CONNECTED_USERS, null);
             socketManager.sendRequest(request);
         } catch (IOException e) {
@@ -68,18 +76,18 @@ public class MainClient extends Application {
         }
     }
 
-    // Exemple : simulateur d'une mise à jour reçue du serveur
-    public void receiveUserListFromServer(String[] users) {
-        System.out.println("Mise à jour des utilisateurs reçue : " + String.join(", ", users));
-        notifyUserListUpdate(users); // Notifie le contrôleur
-    }
-
     @Override
     public void start(Stage primaryStage) throws IOException {
-        this.socketManager = ClientSocketManager.getInstance();
         this.primaryStage = primaryStage;
         this.root = new StackPane();
-        initializeAutoRefresh();
+
+        try {
+            this.socketManager = ClientSocketManager.getInstance();
+            initializeAutoRefresh();
+        } catch (IOException e) {
+            System.err.println("Erreur de connexion au serveur: " + e.getMessage());
+            // On continue malgré l'erreur, pour permettre à l'utilisateur de se connecter plus tard
+        }
 
         // Définir la taille de la fenêtre de connexion/inscription
         Scene scene = new Scene(root, 800, 500);
@@ -131,17 +139,23 @@ public class MainClient extends Application {
     }
 
     public void showChatView(String username) {
-        ChatController chatController = new ChatController(this, username);
-        ChatView chatView = new ChatView(chatController);
+        // Créer et stocker la référence au contrôleur de chat
+        currentChatController = new ChatController(this, username);
+        ChatView chatView = new ChatView(currentChatController);
+
         Scene chatScene = new Scene(chatView.getView(), 1000, 600);
         primaryStage.setScene(chatScene);
         primaryStage.setTitle("💬 Alanya - Chat (" + username + ")");
         primaryStage.setResizable(true); // Permettre le redimensionnement pour la vue de chat
         primaryStage.centerOnScreen();
+
+        // Demander immédiatement la liste des utilisateurs après l'affichage de la vue de chat
+        Platform.runLater(this::requestUsers);
     }
 
     @Override
     public void stop() {
+        System.out.println("Fermeture de l'application...");
         // Arrêter le timeline de rafraîchissement quand l'application se ferme
         if (refreshTimeline != null) {
             refreshTimeline.stop();
