@@ -41,6 +41,7 @@ public class MainClient extends Application {
     public void showRegisterView() {
         RegisterView registerView = new RegisterView(this,socketManager);
         root.getChildren().setAll(registerView.getView());
+
     }
     public void showChatView(String username) {
         ChatController chatController = new ChatController(this, username);
