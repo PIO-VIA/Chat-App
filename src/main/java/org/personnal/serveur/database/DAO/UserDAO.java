@@ -35,13 +35,14 @@ public class UserDAO implements IUserDAO {
 
     @Override
     public boolean save(User user) {
-        String query = "INSERT INTO users(username, password_hash) VALUES(?, ?)";
+        String query = "INSERT INTO users(username,email, password_hash) VALUES(?, ?,?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
             pstmt.setString(1, user.getUsername());
-            pstmt.setString(2, user.getPassword());
+            pstmt.setString(2, user.getEmail());
+            pstmt.setString(3, user.getPassword());
             pstmt.executeUpdate(); // ✅ OK pour INSERT
             return true;
         } catch (SQLException e) {

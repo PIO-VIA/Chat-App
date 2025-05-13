@@ -118,9 +118,10 @@ public class ClientHandler implements Runnable {
 
     private PeerResponse handleRegister(Map<String, String> payload) {
         String username = payload.get("username");
+        String email = payload.get("email");
         String password = payload.get("password");
 
-        User newUser = userService.register(username, password);
+        User newUser = userService.register(username,email, password);
         if (newUser != null) {
             return new PeerResponse(true, "✅ Inscription réussie", newUser);
         } else {

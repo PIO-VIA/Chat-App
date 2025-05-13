@@ -18,5 +18,5 @@ public interface IUserService {
      * @param password Mot de passe en clair
      * @return User créé si succès, null si échec (username déjà pris)
      */
-    User register(String username, String password);
+    User register(String username,String email, String password);
 }

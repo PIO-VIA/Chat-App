@@ -28,13 +28,13 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public User register(String username, String password) {
+    public User register(String username,String email, String password) {
         if (userDao.usernameExists(username)) {
             return null; // Username déjà pris
         }
 
         String hashedPassword = passwordHasher.hashPassword(password);
-        User newUser = new User(username, hashedPassword);
+        User newUser = new User(username,email, hashedPassword);
 
         if (userDao.save(newUser)) {
             return newUser;

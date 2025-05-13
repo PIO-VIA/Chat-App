@@ -116,6 +116,9 @@ public class TestClient {
                             // Lecture d’un message (convertir manuellement)
                             System.out.println("📩 Nouveau message : " + dataMap.get("content") +
                                     " (de " + dataMap.get("sender") + ")");
+                        } else if (response.getData() instanceof java.util.List) {
+                            // Si c'est une liste (cas des utilisateurs connectés)
+                            System.out.println("👥 Utilisateurs connectés : " + response.getData());
                         } else {
                             System.out.println("🧭 Réponse du serveur : " + response.getMessage());
                         }
@@ -132,13 +135,13 @@ public class TestClient {
 
         // Boucle de commandes utilisateur
         while (true) {
-            System.out.print("\nCommande (send / disconnect) > ");
+            System.out.print("\nCommande (send / users / disconnect) > ");
             String command = scanner.nextLine();
 
             if (command.equalsIgnoreCase("disconnect")) {
                 try {
                     sendQuit(output, input);
-                    listenerThread.interrupt(); // 💡 forcer l'arrêt du thread
+                    listenerThread.interrupt();
                     break;
                 } catch (IOException e) {
                     System.err.println("❌ Erreur de déconnexion : " + e.getMessage());
@@ -161,6 +164,14 @@ public class TestClient {
 
                 } catch (IOException e) {
                     System.err.println("❌ Erreur lors de l’envoi du message : " + e.getMessage());
+                }
+            } else if (command.equalsIgnoreCase("users")) {
+                try {
+                    // Envoyer une requête pour obtenir la liste des utilisateurs connectés
+                    PeerRequest request = new PeerRequest(RequestType.GET_CONNECTED_USERS, null);
+                    sendRequest(output, request);
+                } catch (IOException e) {
+                    System.err.println("❌ Erreur lors de la requête des utilisateurs connectés : " + e.getMessage());
                 }
             } else {
                 System.out.println("❌ Commande inconnue.");

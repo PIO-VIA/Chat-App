@@ -35,9 +35,7 @@ describe users;]]></console>
     <last-used-providers />
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
-    <open-files>
-      <object connection-id="d13cf709-19d9-4971-9bb1-d962151c2c9b" object-ref="consoles/Alanya" />
-    </open-files>
+    <open-files />
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="d13cf709-19d9-4971-9bb1-d962151c2c9b" />
