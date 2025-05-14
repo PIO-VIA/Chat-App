@@ -93,8 +93,6 @@ public class ClientHandler implements Runnable {
                 return handleSendMessage(request.getPayload());
             case SEND_FILE:
                 return handleSendFile(request.getPayload());
-            case GET_CONNECTED_USERS:
-                return handleGetConnectedUsers();
             case DISCONNECT:
                 return new PeerResponse(true, "👋 Déconnecté proprement.");
             default:
@@ -177,10 +175,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private PeerResponse handleGetConnectedUsers() {
-        return new PeerResponse(true, "👥 Utilisateurs connectés",
-                new ArrayList<>(SessionManager.getAllSessions().keySet()));
-    }
+
 
     // Méthode utilitaire pour envoyer un message texte d'un autre handler.
     public void sendTextMessage(String fromUsername, String message) {

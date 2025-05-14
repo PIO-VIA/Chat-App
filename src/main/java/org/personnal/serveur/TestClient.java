@@ -165,14 +165,7 @@ public class TestClient {
                 } catch (IOException e) {
                     System.err.println("❌ Erreur lors de l’envoi du message : " + e.getMessage());
                 }
-            } else if (command.equalsIgnoreCase("users")) {
-                try {
-                    // Envoyer une requête pour obtenir la liste des utilisateurs connectés
-                    PeerRequest request = new PeerRequest(RequestType.GET_CONNECTED_USERS, null);
-                    sendRequest(output, request);
-                } catch (IOException e) {
-                    System.err.println("❌ Erreur lors de la requête des utilisateurs connectés : " + e.getMessage());
-                }
+
             } else {
                 System.out.println("❌ Commande inconnue.");
             }
