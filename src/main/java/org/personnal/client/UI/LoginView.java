@@ -1,5 +1,6 @@
 package org.personnal.client.UI;
 
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -9,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import org.personnal.client.MainClient;
+import org.personnal.client.controller.LoginController;
 import org.personnal.client.network.ClientSocketManager;
 import org.personnal.client.protocol.PeerRequest;
 import org.personnal.client.protocol.PeerResponse;
@@ -18,136 +20,139 @@ import java.io.IOException;
 import java.util.Map;
 
 public class LoginView {
-
-    private final MainClient app;
     private final BorderPane layout;
-    private final ClientSocketManager socketManager;
+    private final LoginController controller;
+    private final MainClient app;
 
-    public LoginView(MainClient app, ClientSocketManager socketManager) {
+    // Composants UI
+    private TextField usernameField;
+    private PasswordField passwordField;
+
+    public LoginView(MainClient app, LoginController controller) {
         this.app = app;
-        this.socketManager = socketManager;
+        this.controller = controller;
         this.layout = new BorderPane();
         initUI();
     }
 
     private void initUI() {
-        // Fond bleu pour l'ensemble de l'écran
+        setupBackground();
+        VBox loginBox = createLoginBox();
+        setupCenterLayout(loginBox);
+    }
+
+    private void setupBackground() {
         layout.setStyle("-fx-background-color: linear-gradient(to right, #1a6fc7, #2e8ede);");
+    }
 
-        // Création du cadre blanc central (carré)
+    private VBox createLoginBox() {
         VBox loginBox = new VBox(15);
-        loginBox.setPadding(new Insets(30));
-        loginBox.setMaxWidth(400);
-        loginBox.setMaxHeight(400);
-        loginBox.setMinWidth(350);
-        loginBox.setMinHeight(350);
-        loginBox.setPrefWidth(400);
-        loginBox.setPrefHeight(400);
-        loginBox.setAlignment(Pos.CENTER);
-        loginBox.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
+        configureLoginBox(loginBox);
+        addShadowEffect(loginBox);
+        addComponentsToLoginBox(loginBox);
+        return loginBox;
+    }
 
-        // Effet d'ombre pour le cadre
+    private void configureLoginBox(VBox box) {
+        box.setPadding(new Insets(30));
+        box.setMaxSize(400, 400);
+        box.setMinSize(350, 350);
+        box.setPrefSize(400, 400);
+        box.setAlignment(Pos.CENTER);
+        box.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
+    }
+
+    private void addShadowEffect(VBox box) {
         DropShadow dropShadow = new DropShadow();
         dropShadow.setRadius(10.0);
-        dropShadow.setOffsetX(0);
-        dropShadow.setOffsetY(0);
         dropShadow.setColor(Color.color(0, 0, 0, 0.3));
-        loginBox.setEffect(dropShadow);
+        box.setEffect(dropShadow);
+    }
 
-        // Titre de l'application
-        Label appTitle = new Label("ALANYA");
-        appTitle.setFont(Font.font("Arial", FontWeight.BOLD, 28));
-        appTitle.setTextFill(Color.web("#1a6fc7"));
+    private void addComponentsToLoginBox(VBox box) {
+        Label appTitle = createLabel("ALANYA", 28, "#1a6fc7", FontWeight.BOLD);
+        Label subtitle = createLabel("Connexion", 16, "#555", FontWeight.NORMAL);
 
-        // Sous-titre
-        Label subtitle = new Label("Connexion");
-        subtitle.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-        subtitle.setTextFill(Color.web("#555"));
+        usernameField = createTextField("Nom d'utilisateur");
+        passwordField = createPasswordField("Mot de passe");
+        Button loginBtn = createLoginButton();
+        Hyperlink registerLink = createRegisterLink();
 
-        // Champ nom d'utilisateur
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Nom d'utilisateur");
-        usernameField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+        box.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, loginBtn, registerLink);
+    }
 
-        // Champ mot de passe
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Mot de passe");
-        passwordField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+    private Label createLabel(String text, int size, String color, FontWeight weight) {
+        Label label = new Label(text);
+        label.setFont(Font.font("Arial", weight, size));
+        label.setTextFill(Color.web(color));
+        return label;
+    }
 
-        // Bouton de connexion
-        Button loginBtn = new Button("SE CONNECTER");
-        loginBtn.setMaxWidth(Double.MAX_VALUE);
-        loginBtn.setStyle(
-                "-fx-background-color: #1a6fc7; " +
+    private TextField createTextField(String prompt) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
+        field.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; " +
+                "-fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+        return field;
+    }
+
+    private PasswordField createPasswordField(String prompt) {
+        PasswordField field = new PasswordField();
+        field.setPromptText(prompt);
+        field.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; " +
+                "-fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+        return field;
+    }
+
+    private Button createLoginButton() {
+        Button button = new Button("SE CONNECTER");
+        button.setMaxWidth(Double.MAX_VALUE);
+        applyButtonStyle(button, "#1a6fc7");
+
+        button.setOnMouseEntered(e -> applyButtonStyle(button, "#0d5fb7"));
+        button.setOnMouseExited(e -> applyButtonStyle(button, "#1a6fc7"));
+        button.setOnAction(this::handleLoginAction);
+
+        return button;
+    }
+
+    private void applyButtonStyle(Button button, String color) {
+        button.setStyle(
+                "-fx-background-color: " + color + "; " +
                         "-fx-text-fill: white; " +
                         "-fx-font-weight: bold; " +
                         "-fx-padding: 12px; " +
                         "-fx-background-radius: 5px;"
         );
+    }
 
-        // Effet hover sur le bouton
-        loginBtn.setOnMouseEntered(e -> loginBtn.setStyle(
-                "-fx-background-color: #0d5fb7; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12px; " +
-                        "-fx-background-radius: 5px;"
-        ));
+    private Hyperlink createRegisterLink() {
+        Hyperlink link = new Hyperlink("Pas encore de compte ? Inscrivez-vous");
+        link.setStyle("-fx-text-fill: #1a6fc7;");
+        link.setOnAction(e -> app.showRegisterView());
+        return link;
+    }
 
-        loginBtn.setOnMouseExited(e -> loginBtn.setStyle(
-                "-fx-background-color: #1a6fc7; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12px; " +
-                        "-fx-background-radius: 5px;"
-        ));
-
-        // Action du bouton de connexion
-        loginBtn.setOnAction(e -> {
-            String username = usernameField.getText().trim();
-            String password = passwordField.getText().trim();
-
-            if (username.isEmpty() || password.isEmpty()) {
-                showAlert("Erreur", "Veuillez remplir tous les champs.");
-                return;
-            }
-
-            try {
-                PeerRequest request = new PeerRequest(RequestType.LOGIN, Map.of(
-                        "username", username,
-                        "password", password
-                ));
-                socketManager.sendRequest(request);
-
-                PeerResponse response = socketManager.readResponse();
-
-                if (response.isSuccess()) {
-                    showAlert("Succès", "Connexion réussie !");
-                    app.showChatView(usernameField.getText());
-                } else {
-                    showAlert("Échec de connexion", response.getMessage());
-                }
-
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                showAlert("Erreur", "Impossible de communiquer avec le serveur.");
-            }
-        });
-
-        // Lien pour s'inscrire
-        Label switchToRegister = new Label("Pas encore de compte ? Inscrivez-vous");
-        switchToRegister.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;");
-        switchToRegister.setOnMouseEntered(e -> switchToRegister.setStyle("-fx-text-fill: #0d5fb7; -fx-cursor: hand; -fx-underline: true;"));
-        switchToRegister.setOnMouseExited(e -> switchToRegister.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;"));
-        switchToRegister.setOnMouseClicked(e -> app.showRegisterView());
-
-        // Ajout des éléments dans le conteneur
-        loginBox.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, loginBtn, switchToRegister);
-
-        // Centrer le cadre dans la borderpane
+    private void setupCenterLayout(VBox loginBox) {
         StackPane centeringPane = new StackPane(loginBox);
         centeringPane.setPadding(new Insets(20));
         layout.setCenter(centeringPane);
+    }
+
+    private void handleLoginAction(ActionEvent event) {
+        try {
+            controller.handleLogin(
+                    usernameField.getText().trim(),
+                    passwordField.getText().trim()
+            );
+        } catch (IllegalArgumentException ex) {
+            showAlert("Erreur", ex.getMessage());
+        } catch (IllegalStateException ex) {
+            showAlert("Échec de connexion", ex.getMessage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showAlert("Erreur", "Impossible de communiquer avec le serveur.");
+        }
     }
 
     public Pane getView() {

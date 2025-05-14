@@ -9,6 +9,8 @@ import org.personnal.client.UI.ChatView;
 import org.personnal.client.UI.LoginView;
 import org.personnal.client.UI.RegisterView;
 import org.personnal.client.controller.ChatController;
+import org.personnal.client.controller.LoginController;
+import org.personnal.client.controller.RegisterController;
 import org.personnal.client.network.ClientSocketManager;
 
 import java.io.IOException;
@@ -18,7 +20,7 @@ public class MainClient extends Application {
     private Stage primaryStage;
     private StackPane root;
     private ClientSocketManager socketManager;
-    private final double MIN_WIDTH = 400;
+    private final double MIN_WIDTH = 600;
     private final double MIN_HEIGHT = 500;
     private final double PREF_WIDTH = 450;
     private final double PREF_HEIGHT = 550;
@@ -30,6 +32,7 @@ public class MainClient extends Application {
         this.socketManager = ClientSocketManager.getInstance();
         this.primaryStage = primaryStage;
         this.root = new StackPane();
+
 
         // Configuration de la fenêtre principale
         primaryStage.setMinWidth(MIN_WIDTH);
@@ -54,18 +57,18 @@ public class MainClient extends Application {
     }
 
     public void showLoginView() {
-        LoginView loginView = new LoginView(this, socketManager);
+        LoginController loginController = new LoginController(this, socketManager);
+        LoginView loginView = new LoginView(this, loginController);
         root.getChildren().setAll(loginView.getView());
         primaryStage.setTitle("Alanya - Connexion");
-
-        // Si on revient du chat à login, remettre à la taille initiale
         primaryStage.setWidth(PREF_WIDTH);
         primaryStage.setHeight(PREF_HEIGHT);
         primaryStage.centerOnScreen();
     }
 
     public void showRegisterView() {
-        RegisterView registerView = new RegisterView(this, socketManager);
+        RegisterController registerController = new RegisterController(this, socketManager);
+        RegisterView registerView = new RegisterView(this, registerController);
         root.getChildren().setAll(registerView.getView());
         primaryStage.setTitle("Alanya - Inscription");
     }

@@ -1,5 +1,6 @@
 package org.personnal.client.UI;
 
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -9,156 +10,153 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import org.personnal.client.MainClient;
-import org.personnal.client.network.ClientSocketManager;
-import org.personnal.client.protocol.PeerRequest;
-import org.personnal.client.protocol.PeerResponse;
-import org.personnal.client.protocol.RequestType;
-
-import java.io.IOException;
-import java.util.Map;
+import org.personnal.client.controller.RegisterController;
 
 public class RegisterView {
-
-    private final MainClient app;
     private final BorderPane layout;
-    private final ClientSocketManager socketManager;
+    private final RegisterController controller;
+    private final MainClient app;
 
-    public RegisterView(MainClient app, ClientSocketManager socketManager) {
+    // Composants UI
+    private TextField usernameField;
+    private TextField emailField;
+    private PasswordField passwordField;
+    private PasswordField confirmPasswordField;
+
+    public RegisterView(MainClient app, RegisterController controller) {
         this.app = app;
-        this.socketManager = socketManager;
+        this.controller = controller;
         this.layout = new BorderPane();
         initUI();
     }
 
     private void initUI() {
-        // Fond bleu pour l'ensemble de l'écran
+        setupBackground();
+        VBox registerBox = createRegisterBox();
+        setupCenterLayout(registerBox);
+    }
+
+    private void setupBackground() {
         layout.setStyle("-fx-background-color: linear-gradient(to right, #1a6fc7, #2e8ede);");
+    }
 
-        // Création du cadre blanc central (carré)
+    private VBox createRegisterBox() {
         VBox registerBox = new VBox(15);
-        registerBox.setPadding(new Insets(30));
-        registerBox.setMaxWidth(400);
-        registerBox.setMaxHeight(400);
-        registerBox.setMinWidth(350);
-        registerBox.setMinHeight(350);
-        registerBox.setPrefWidth(400);
-        registerBox.setPrefHeight(400);
-        registerBox.setAlignment(Pos.CENTER);
-        registerBox.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
+        configureRegisterBox(registerBox);
+        addShadowEffect(registerBox);
+        addComponentsToRegisterBox(registerBox);
+        return registerBox;
+    }
 
-        // Effet d'ombre pour le cadre
+    private void configureRegisterBox(VBox box) {
+        box.setPadding(new Insets(30));
+        box.setMaxSize(400, 400);
+        box.setMinSize(350, 350);
+        box.setPrefSize(400, 400);
+        box.setAlignment(Pos.CENTER);
+        box.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
+    }
+
+    private void addShadowEffect(VBox box) {
         DropShadow dropShadow = new DropShadow();
         dropShadow.setRadius(10.0);
-        dropShadow.setOffsetX(0);
-        dropShadow.setOffsetY(0);
         dropShadow.setColor(Color.color(0, 0, 0, 0.3));
-        registerBox.setEffect(dropShadow);
+        box.setEffect(dropShadow);
+    }
 
-        // Titre de l'application
-        Label appTitle = new Label("ALANYA");
-        appTitle.setFont(Font.font("Arial", FontWeight.BOLD, 28));
-        appTitle.setTextFill(Color.web("#1a6fc7"));
+    private void addComponentsToRegisterBox(VBox box) {
+        Label appTitle = createLabel("ALANYA", 28, "#1a6fc7", FontWeight.BOLD);
+        Label subtitle = createLabel("Créer un compte", 16, "#555", FontWeight.NORMAL);
 
-        // Sous-titre
-        Label subtitle = new Label("Créer un compte");
-        subtitle.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-        subtitle.setTextFill(Color.web("#555"));
+        usernameField = createTextField("Nom d'utilisateur");
+        emailField = createTextField("example@gmail.com");
+        passwordField = createPasswordField("Mot de passe");
+        confirmPasswordField = createPasswordField("Confirmer le mot de passe");
+        Button registerBtn = createRegisterButton();
+        Hyperlink loginLink = createLoginLink();
 
-        // Champ nom d'utilisateur
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Nom d'utilisateur");
-        usernameField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+        box.getChildren().addAll(appTitle, subtitle, usernameField, emailField,
+                passwordField, confirmPasswordField, registerBtn, loginLink);
+    }
 
-        // Champ mot de passe
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Mot de passe");
-        passwordField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+    private Label createLabel(String text, int size, String color, FontWeight weight) {
+        Label label = new Label(text);
+        label.setFont(Font.font("Arial", weight, size));
+        label.setTextFill(Color.web(color));
+        return label;
+    }
 
-        // Confirmer le mot de passe (champ supplémentaire pour l'inscription)
-        PasswordField confirmPasswordField = new PasswordField();
-        confirmPasswordField.setPromptText("Confirmer le mot de passe");
-        confirmPasswordField.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; -fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+    private TextField createTextField(String prompt) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
+        applyFieldStyle(field);
+        return field;
+    }
 
-        // Bouton d'inscription
-        Button registerBtn = new Button("S'INSCRIRE");
-        registerBtn.setMaxWidth(Double.MAX_VALUE);
-        registerBtn.setStyle(
-                "-fx-background-color: #1a6fc7; " +
+    private PasswordField createPasswordField(String prompt) {
+        PasswordField field = new PasswordField();
+        field.setPromptText(prompt);
+        applyFieldStyle(field);
+        return field;
+    }
+
+    private void applyFieldStyle(Control field) {
+        field.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; " +
+                "-fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
+    }
+
+    private Button createRegisterButton() {
+        Button button = new Button("S'INSCRIRE");
+        button.setMaxWidth(Double.MAX_VALUE);
+        applyButtonStyle(button, "#1a6fc7");
+
+        button.setOnMouseEntered(e -> applyButtonStyle(button, "#0d5fb7"));
+        button.setOnMouseExited(e -> applyButtonStyle(button, "#1a6fc7"));
+        button.setOnAction(this::handleRegisterAction);
+
+        return button;
+    }
+
+    private void applyButtonStyle(Button button, String color) {
+        button.setStyle(
+                "-fx-background-color: " + color + "; " +
                         "-fx-text-fill: white; " +
                         "-fx-font-weight: bold; " +
                         "-fx-padding: 12px; " +
                         "-fx-background-radius: 5px;"
         );
+    }
 
-        // Effet hover sur le bouton
-        registerBtn.setOnMouseEntered(e -> registerBtn.setStyle(
-                "-fx-background-color: #0d5fb7; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12px; " +
-                        "-fx-background-radius: 5px;"
-        ));
+    private Hyperlink createLoginLink() {
+        Hyperlink link = new Hyperlink("Déjà inscrit ? Connectez-vous");
+        link.setStyle("-fx-text-fill: #1a6fc7;");
+        link.setOnAction(e -> app.showLoginView());
+        return link;
+    }
 
-        registerBtn.setOnMouseExited(e -> registerBtn.setStyle(
-                "-fx-background-color: #1a6fc7; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12px; " +
-                        "-fx-background-radius: 5px;"
-        ));
-
-        // Action du bouton d'inscription
-        registerBtn.setOnAction(e -> {
-            String username = usernameField.getText().trim();
-            String password = passwordField.getText().trim();
-            String confirmPassword = confirmPasswordField.getText().trim();
-
-            if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                showAlert("Erreur", "Veuillez remplir tous les champs.");
-                return;
-            }
-
-            if (!password.equals(confirmPassword)) {
-                showAlert("Erreur", "Les mots de passe ne correspondent pas.");
-                return;
-            }
-
-            try {
-                PeerRequest request = new PeerRequest(RequestType.REGISTER, Map.of(
-                        "username", username,
-                        "password", password
-                ));
-                socketManager.sendRequest(request);
-
-                PeerResponse response = socketManager.readResponse();
-
-                if (response.isSuccess()) {
-                    showAlert("Succès", "Compte créé avec succès !");
-                    app.showLoginView();
-                } else {
-                    showAlert("Échec de l'inscription", response.getMessage());
-                }
-
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                showAlert("Erreur", "Impossible de communiquer avec le serveur.");
-            }
-        });
-
-        // Lien pour se connecter
-        Label switchToLogin = new Label("Déjà inscrit ? Connectez-vous");
-        switchToLogin.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;");
-        switchToLogin.setOnMouseEntered(e -> switchToLogin.setStyle("-fx-text-fill: #0d5fb7; -fx-cursor: hand; -fx-underline: true;"));
-        switchToLogin.setOnMouseExited(e -> switchToLogin.setStyle("-fx-text-fill: #1a6fc7; -fx-cursor: hand;"));
-        switchToLogin.setOnMouseClicked(e -> app.showLoginView());
-
-        // Ajout des éléments dans le conteneur
-        registerBox.getChildren().addAll(appTitle, subtitle, usernameField, passwordField, confirmPasswordField, registerBtn, switchToLogin);
-
-        // Centrer le cadre dans la borderpane
+    private void setupCenterLayout(VBox registerBox) {
         StackPane centeringPane = new StackPane(registerBox);
         centeringPane.setPadding(new Insets(20));
         layout.setCenter(centeringPane);
+    }
+
+    private void handleRegisterAction(ActionEvent event) {
+        try {
+            controller.handleRegistration(
+                    usernameField.getText().trim(),
+                    emailField.getText().trim(),
+                    passwordField.getText().trim(),
+                    confirmPasswordField.getText().trim()
+            );
+            showAlert("Succès", "Compte créé avec succès !");
+        } catch (IllegalArgumentException ex) {
+            showAlert("Erreur", ex.getMessage());
+        } catch (IllegalStateException ex) {
+            showAlert("Échec de l'inscription", ex.getMessage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showAlert("Erreur", "Impossible de communiquer avec le serveur.");
+        }
     }
 
     public Pane getView() {
@@ -171,7 +169,6 @@ public class RegisterView {
         alert.setHeaderText(null);
         alert.setContentText(message);
 
-        // Style de l'alerte
         DialogPane dialogPane = alert.getDialogPane();
         dialogPane.setStyle("-fx-background-color: white;");
         dialogPane.getStyleClass().add("custom-alert");
