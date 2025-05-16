@@ -93,6 +93,10 @@ public class ClientHandler implements Runnable {
                 return handleSendMessage(request.getPayload());
             case SEND_FILE:
                 return handleSendFile(request.getPayload());
+            case CHECK_USER:
+                return handleCheckUser(request.getPayload());
+            case CHECK_ONLINE:
+                return handleCheckOnline(request.getPayload());
             case DISCONNECT:
                 return new PeerResponse(true, "👋 Déconnecté proprement.");
             default:
@@ -143,7 +147,7 @@ public class ClientHandler implements Runnable {
                 );
                 return new PeerResponse(true, "✅ Message délivré à " + receiver, message);
             } catch (IOException e) {
-                return new PeerResponse(false, "❌ Erreur d’envoi au destinataire : " + e.getMessage());
+                return new PeerResponse(false, "❌ Erreur d'envoi au destinataire : " + e.getMessage());
             }
         } else {
             return new PeerResponse(false, "❌ Utilisateur " + receiver + " non connecté");
@@ -168,14 +172,54 @@ public class ClientHandler implements Runnable {
                 receiverHandler.sendJsonResponse(response);
                 return new PeerResponse(true, "✅ Fichier délivré à " + receiver);
             } catch (IOException e) {
-                return new PeerResponse(false, "❌ Erreur d’envoi de fichier : " + e.getMessage());
+                return new PeerResponse(false, "❌ Erreur d'envoi de fichier : " + e.getMessage());
             }
         } else {
             return new PeerResponse(false, "❌ Utilisateur " + receiver + " non connecté");
         }
     }
 
+    /**
+     * Gère la requête de vérification d'existence d'un utilisateur
+     * @param payload les données de la requête contenant le nom d'utilisateur à vérifier
+     * @return une réponse indiquant si l'utilisateur existe ou non
+     */
+    private PeerResponse handleCheckUser(Map<String, String> payload) {
+        String usernameToCheck = payload.get("username");
 
+        if (usernameToCheck == null || usernameToCheck.trim().isEmpty()) {
+            return new PeerResponse(false, "❌ Nom d'utilisateur non spécifié");
+        }
+
+        boolean userExists = userService.userExists(usernameToCheck);
+
+        if (userExists) {
+            return new PeerResponse(true, "✅ L'utilisateur " + usernameToCheck + " existe", Map.of("exists", "true"));
+        } else {
+            return new PeerResponse(false, "❌ L'utilisateur " + usernameToCheck + " n'existe pas", Map.of("exists", "false"));
+        }
+    }
+
+    /**
+     * Gère la requête de vérification si un utilisateur est en ligne
+     * @param payload les données de la requête contenant le nom d'utilisateur à vérifier
+     * @return une réponse indiquant si l'utilisateur est connecté ou non
+     */
+    private PeerResponse handleCheckOnline(Map<String, String> payload) {
+        String usernameToCheck = payload.get("username");
+
+        if (usernameToCheck == null || usernameToCheck.trim().isEmpty()) {
+            return new PeerResponse(false, "❌ Nom d'utilisateur non spécifié");
+        }
+
+        boolean isOnline = SessionManager.isUserOnline(usernameToCheck);
+
+        if (isOnline) {
+            return new PeerResponse(true, "✅ L'utilisateur " + usernameToCheck + " est en ligne", Map.of("online", "true"));
+        } else {
+            return new PeerResponse(false, "❌ L'utilisateur " + usernameToCheck + " n'est pas en ligne", Map.of("online", "false"));
+        }
+    }
 
     // Méthode utilitaire pour envoyer un message texte d'un autre handler.
     public void sendTextMessage(String fromUsername, String message) {

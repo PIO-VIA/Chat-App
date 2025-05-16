@@ -41,4 +41,13 @@ public class UserServiceImpl implements IUserService {
         }
         return null; // Échec de l'enregistrement
     }
+    @Override
+    public boolean userExists(String username) {
+        User user = userDao.findByUsername(username);
+        if (user == null) {
+            return false; // Utilisateur non trouvé
+        }
+        return true;
+
+    }
 }
