@@ -8,5 +8,7 @@ public enum RequestType {
     DISCONNECT,
     SEND_MESSAGE,
     SEND_FILE,
+    CHECK_USER,       // Vérifier si un utilisateur existe
+    CHECK_ONLINE,
 
 }
