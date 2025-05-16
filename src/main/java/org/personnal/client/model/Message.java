@@ -5,35 +5,36 @@ import java.time.LocalDateTime;
 
 public class Message implements Serializable {
 
-    private int id;
+    private int idMessage;
     private String sender;
     private String receiver;
     private String content;
     private LocalDateTime timestamp;
-    private boolean isSentByMe;
+    private boolean read;
 
-    public Message(int id, String sender, String receiver, String content, LocalDateTime timestamp, boolean isSentByMe) {
-        this.id = id;
+    public Message(int idMessage, String sender, String receiver, String content, LocalDateTime timestamp, boolean read) {
+        this.idMessage = idMessage;
         this.sender = sender;
         this.receiver = receiver;
         this.content = content;
         this.timestamp = timestamp;
-        this.isSentByMe = isSentByMe;
+        this.read = read;
     }
 
     public Message() {}
-    public int getId() { return id; }
+    public int getIdMessage() { return idMessage; }
     public String getSender() { return sender; }
     public String getReceiver() { return receiver; }
     public String getContent() { return content; }
     public LocalDateTime getTimestamp() { return timestamp; }
-    public boolean isSentByMe() { return isSentByMe; }
-    public void setId(int id) { this.id = id; }
+    public boolean isRead() {return read;}
+    public void setIdMessage(int id) { this.idMessage = id; }
     public void setSender(String sender) { this.sender = sender; }
     public void setReceiver(String receiver) { this.receiver = receiver; }
     public void setContent(String content) { this.content = content; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-    public void setSentByMe(boolean sentByMe) { isSentByMe = sentByMe; }
+
+    public void setRead(boolean read) {this.read = read;}
 
     @Override
     public String toString() {
@@ -42,7 +43,7 @@ public class Message implements Serializable {
                 ", receiver='" + receiver + '\'' +
                 ", content='" + content + '\'' +
                 ", timestamp=" + timestamp +
-                ", read=" + isSentByMe +
+                ", read=" + read +
                 '}';
     }
 }

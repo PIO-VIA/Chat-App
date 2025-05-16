@@ -31,7 +31,7 @@ class DatabaseManager:
                 receiver TEXT NOT NULL,
                 content TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                is_sent_by_me BOOLEAN NOT NULL
+                read BOOLEAN NOT NULL
             );
         """)
 
@@ -43,7 +43,7 @@ class DatabaseManager:
                 filename TEXT NOT NULL,
                 filepath TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                is_sent_by_me BOOLEAN NOT NULL
+                read BOOLEAN NOT NULL
             );
         """)
 

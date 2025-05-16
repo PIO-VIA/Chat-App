@@ -28,7 +28,7 @@ public class MessageDAO implements IMessageDAO {
             stmt.setString(2, msg.getReceiver());
             stmt.setString(3, msg.getContent());
             stmt.setString(4, msg.getTimestamp().toString());
-            stmt.setBoolean(5, msg.isSentByMe());
+            stmt.setBoolean(5, msg.isRead());
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -45,12 +45,12 @@ public class MessageDAO implements IMessageDAO {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 Message msg = new Message();
-                msg.setId(rs.getInt("id"));
+                msg.setIdMessage(rs.getInt("id"));
                 msg.setSender(rs.getString("sender"));
                 msg.setReceiver(rs.getString("receiver"));
                 msg.setContent(rs.getString("content"));
                 msg.setTimestamp(LocalDateTime.parse(rs.getString("timestamp")));
-                msg.setSentByMe(rs.getBoolean("is_sent_by_me"));
+                msg.setRead(rs.getBoolean("is_sent_by_me"));
                 messages.add(msg);
             }
         } catch (SQLException e) {

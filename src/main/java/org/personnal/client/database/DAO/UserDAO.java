@@ -28,7 +28,7 @@ public class UserDAO implements IUserDAO {
                 PreparedStatement stmt = conn.prepareStatement("UPDATE users SET username=?, email=? WHERE id=?")) {
             stmt.setString(1, user.getUsername());
             stmt.setString(2, user.getEmail());
-            stmt.setInt(3, user.getId());
+            stmt.setInt(3, user.getIdUser());
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
