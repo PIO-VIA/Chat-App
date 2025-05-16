@@ -4,8 +4,11 @@ public enum RequestType {
     REGISTER,
     LOGIN,
     CALL,
+    CALL_VIDEO,
     DISCONNECT,
     SEND_MESSAGE,
     SEND_FILE,
-    GET_CONNECTED_USERS,
+    CHECK_USER,
+    CHECK_ONLINE,
+
 }

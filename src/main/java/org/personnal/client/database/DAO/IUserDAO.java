@@ -1,4 +1,8 @@
 package org.personnal.client.database.DAO;
 
-public interface IUserDAO {
+
+import org.personnal.client.model.User;
+
+public interface IUserDAO extends BaseDAO<User> {
+    User findByUsername(String username);
 }

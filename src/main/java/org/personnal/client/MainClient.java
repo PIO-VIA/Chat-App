@@ -72,7 +72,7 @@ public class MainClient extends Application {
         primaryStage.setTitle("Alanya - Inscription");
     }
 
-    public void showChatView(String username) {
+    public void showChatView(String username) throws IOException {
         ChatController chatController = new ChatController(this, username);
         ChatView chatView = new ChatView(chatController);
 

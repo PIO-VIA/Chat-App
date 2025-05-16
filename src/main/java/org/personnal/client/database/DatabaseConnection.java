@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    private static final String URL = "jdbc:sqlite:AlanyaServeur.db";
+    private static final String URL = "jdbc:sqlite:client_chat.db";
 
     public static Connection getConnection() throws SQLException {
         try {
