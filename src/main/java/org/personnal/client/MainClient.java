@@ -28,10 +28,12 @@ public class MainClient extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
+        // Initialiser la base de données locale
+        DatabaseInitializer.initialize();
+
         this.socketManager = ClientSocketManager.getInstance();
         this.primaryStage = primaryStage;
         this.root = new StackPane();
-
 
         // Configuration de la fenêtre principale
         primaryStage.setMinWidth(MIN_WIDTH);
@@ -97,8 +99,7 @@ public class MainClient extends Application {
         // Nettoyer les ressources, fermer les connexions
         try {
             if (socketManager != null) {
-                // Méthode à ajouter pour fermer proprement la connexion
-                // socketManager.disconnect();
+                socketManager.closeConnection();
             }
         } catch (Exception e) {
             e.printStackTrace();

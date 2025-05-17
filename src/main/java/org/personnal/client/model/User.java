@@ -25,7 +25,10 @@ public class User implements Serializable {
 
     }
 
-
+    public User(String username, String email) {
+        this.username = username;
+        this.email = email;
+    }
 
     public String getEmail() {return email;}
     public int getIdUser() { return idUser; }
