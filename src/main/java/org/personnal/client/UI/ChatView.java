@@ -18,11 +18,8 @@ import org.personnal.client.controller.ChatController;
 import org.personnal.client.model.FileData;
 import org.personnal.client.model.Message;
 import org.personnal.client.model.User;
-
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -410,6 +407,7 @@ public class ChatView {
      * @param message Le message à ajouter
      */
     public void addMessageToConversation(Message message) {
+        // Éviter les appels imbriqués à Platform.runLater()
         Platform.runLater(() -> {
             // Ajouter le message à la base de données locale si c'est un message reçu
             if (!message.getSender().equals(controller.getCurrentUsername())) {
@@ -423,14 +421,13 @@ public class ChatView {
             // Si c'est la conversation active, mettre à jour la vue
             if (partner.equals(currentChatPartner)) {
                 messages.add(message);
-                Platform.runLater(() -> messageListView.scrollTo(messages.size() - 1));
+                messageListView.scrollTo(messages.size() - 1);
             }
 
             // Mettre à jour la cellule du contact dans la liste pour montrer le dernier message
             updateContactWithLastMessage(partner, message.getContent());
         });
     }
-
     /**
      * Ajoute un fichier à la conversation actuelle
      * @param file Le fichier à ajouter
@@ -463,9 +460,50 @@ public class ChatView {
         });
     }
 
+    /**
+     * Met à jour la cellule du contact avec le dernier message reçu
+     * @param contact Nom du contact
+     * @param lastMessage Contenu du dernier message
+     */
     private void updateContactWithLastMessage(String contact, String lastMessage) {
         // Mettre à jour la cellule de contact avec le dernier message
-        contactListView.refresh();
+        for (int i = 0; i < contactListView.getItems().size(); i++) {
+            if (contactListView.getItems().get(i).equals(contact)) {
+                // Mettre à jour le texte du dernier message dans la cellule
+                int finalI = i;
+                Platform.runLater(() -> {
+                    // Forcer le rafraîchissement de la cellule spécifique
+                    contactListView.refresh();
+
+                    // Optionnel : mettre en surbrillance temporairement le contact
+                    // pour indiquer un nouveau message
+                    if (!contact.equals(currentChatPartner)) {
+                        ListCell<String> cell = (ListCell<String>) contactListView.lookup(".list-cell:filled:selected");
+                        if (cell != null && cell.getIndex() == finalI) {
+                            cell.setStyle("-fx-background-color: #e6f7ff;");
+                            // Rétablir le style après un certain temps
+                            new java.util.Timer().schedule(
+                                    new java.util.TimerTask() {
+                                        @Override
+                                        public void run() {
+                                            Platform.runLater(() -> cell.setStyle(""));
+                                        }
+                                    }, 2000 // 2 secondes
+                            );
+                        }
+                    }
+                });
+                break;
+            }
+        }
+
+        // Remonter le contact concerné en haut de la liste si ce n'est pas la conversation active
+        if (!contact.equals(currentChatPartner) && contacts.contains(contact)) {
+            Platform.runLater(() -> {
+                contacts.remove(contact);
+                contacts.add(0, contact);
+            });
+        }
     }
 
     /**
@@ -703,6 +741,29 @@ public class ChatView {
 
         // Afficher le dialogue
         dialog.showAndWait();
+    }
+    /**
+     * Rafraîchit la liste des messages pour le contact actuel
+     */
+    public void refreshMessages() {
+        if (currentChatPartner != null) {
+            Platform.runLater(() -> {
+                // Sauvegarde de la position actuelle de défilement
+                int selectedIndex = messageListView.getSelectionModel().getSelectedIndex();
+
+
+                // Recharger tous les messages
+                messages.clear();
+                messages.addAll(controller.loadMessagesForContact(currentChatPartner));
+
+                // Restaurer la position de défilement ou défiler vers le bas
+                if (selectedIndex >= 0 && selectedIndex < messages.size()) {
+                    messageListView.getSelectionModel().select(selectedIndex);
+                } else if (!messages.isEmpty()) {
+                    messageListView.scrollTo(messages.size() - 1);
+                }
+            });
+        }
     }
 
     /**

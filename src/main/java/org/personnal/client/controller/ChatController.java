@@ -12,6 +12,7 @@ import org.personnal.client.network.ClientSocketManager;
 import org.personnal.client.protocol.PeerRequest;
 import org.personnal.client.protocol.PeerResponse;
 import org.personnal.client.protocol.RequestType;
+import org.personnal.client.UI.ChatView;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +36,9 @@ public class ChatController {
     private final IMessageDAO messageDAO;
     private final IFileDAO fileDAO;
 
+    // Référence à la vue de chat (nécessaire pour le MessageListener)
+    private ChatView chatView;
+
     public ChatController(MainClient app, String currentUsername) throws IOException {
         this.app = app;
         this.currentUsername = currentUsername;
@@ -45,8 +49,24 @@ public class ChatController {
         this.messageDAO = new MessageDAO();
         this.fileDAO = new FileDAO();
 
+        // Définir l'utilisateur courant comme propriété système pour les requêtes SQL
+        System.setProperty("current.user", currentUsername);
+
         // Charger les contacts depuis la BD locale au démarrage
         loadContactsFromDatabase();
+    }
+
+    /**
+     * Configure la vue de chat et démarre le listener de messages
+     * @param chatView Vue de chat à configurer
+     */
+    public void setupChatView(ChatView chatView) {
+        this.chatView = chatView;
+
+        // Démarrer le listener de messages
+        socketManager.startMessageListener(chatView, currentUsername);
+
+        System.out.println("ChatView configurée pour l'utilisateur " + currentUsername);
     }
 
     /**
@@ -101,6 +121,8 @@ public class ChatController {
                 // Sauvegarder le message dans la BD locale
                 messageDAO.saveMessage(message);
 
+                System.out.println("Message envoyé à " + receiver + " et sauvegardé localement");
+
                 return true;
             }
             return false;
@@ -123,28 +145,60 @@ public class ChatController {
     public ObservableList<Message> loadMessagesForContact(String contact) {
         ObservableList<Message> messages = FXCollections.observableArrayList();
 
-        // Récupérer les messages échangés avec ce contact depuis la BD locale
-        List<Message> messageList = messageDAO.getMessagesWith(contact);
-        messages.addAll(messageList);
+        try {
+            // Définir l'utilisateur courant comme propriété système pour la requête SQL
+            System.setProperty("current.user", currentUsername);
 
-        // Récupérer également les fichiers échangés avec ce contact
-        List<FileData> fileList = fileDAO.getFilesWith(contact);
+            // Récupérer les messages échangés avec ce contact depuis la BD locale
+            List<Message> messageList = messageDAO.getMessagesWith(contact);
 
-        // Convertir les fichiers en messages pour les afficher dans la conversation
-        for (FileData file : fileList) {
-            Message fileMessage = new Message();
-            fileMessage.setIdMessage(file.getId());
-            fileMessage.setSender(file.getSender());
-            fileMessage.setReceiver(file.getReceiver());
-            fileMessage.setContent("Fichier: " + file.getFilename());
-            fileMessage.setTimestamp(file.getTimestamp());
-            fileMessage.setRead(file.isRead());
+            if (messageList.isEmpty()) {
+                System.out.println("Aucun message trouvé avec " + contact);
+            } else {
+                System.out.println("Messages trouvés: " + messageList.size());
 
-            messages.add(fileMessage);
+                // Pour déboguer, afficher quelques messages
+                for (int i = 0; i < Math.min(messageList.size(), 3); i++) {
+                    Message msg = messageList.get(i);
+                    System.out.println("Message " + i + ": " + msg.getSender() + " -> " +
+                            msg.getReceiver() + ": " + msg.getContent() +
+                            " (" + msg.getTimestamp() + ")");
+                }
+            }
+
+            messages.addAll(messageList);
+
+            // Récupérer également les fichiers échangés avec ce contact
+            List<FileData> fileList = fileDAO.getFilesWith(contact);
+
+            // Convertir les fichiers en messages pour les afficher dans la conversation
+            for (FileData file : fileList) {
+                Message fileMessage = new Message();
+                fileMessage.setIdMessage(file.getId());
+                fileMessage.setSender(file.getSender());
+                fileMessage.setReceiver(file.getReceiver());
+                fileMessage.setContent("Fichier: " + file.getFilename());
+                fileMessage.setTimestamp(file.getTimestamp());
+                fileMessage.setRead(file.isRead());
+
+                messages.add(fileMessage);
+            }
+
+            // Trier les messages par date
+            messages.sort((m1, m2) -> {
+                if (m1.getTimestamp() == null && m2.getTimestamp() == null) return 0;
+                if (m1.getTimestamp() == null) return -1;
+                if (m2.getTimestamp() == null) return 1;
+                return m1.getTimestamp().compareTo(m2.getTimestamp());
+            });
+
+            // Marquer les messages du contact comme lus
+            messageDAO.markMessagesAsRead(contact, currentUsername);
+
+        } catch (Exception e) {
+            System.err.println("Erreur lors du chargement des messages: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // Trier les messages par date
-        messages.sort((m1, m2) -> m1.getTimestamp().compareTo(m2.getTimestamp()));
 
         return messages;
     }
@@ -194,6 +248,8 @@ public class ChatController {
             fileData.setRead(true); // Les fichiers que nous envoyons sont considérés comme lus
 
             fileDAO.saveFile(fileData);
+
+            System.out.println("Fichier envoyé à " + receiver + " et sauvegardé localement: " + file.getName());
         } else {
             throw new IOException("Échec de l'envoi: " + response.getMessage());
         }
@@ -335,18 +391,48 @@ public class ChatController {
      * Enregistre un message reçu dans la base de données locale
      */
     public void saveReceivedMessage(Message message) {
-        // Marquer le message comme non lu puisqu'il vient d'être reçu
-        message.setRead(false);
-        messageDAO.saveMessage(message);
+        try {
+            // Marquer le message comme non lu puisqu'il vient d'être reçu
+            message.setRead(false);
+            messageDAO.saveMessage(message);
+
+            System.out.println("Message reçu de " + message.getSender() + " sauvegardé dans la BD: " + message.getContent());
+
+            // Si la vue est disponible et que le message vient du partenaire de chat actuel,
+            // rafraîchir la liste des messages
+            if (chatView != null && currentChatPartner != null &&
+                    message.getSender().equals(currentChatPartner)) {
+
+                chatView.refreshMessages();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la sauvegarde du message reçu: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
      * Enregistre un fichier reçu dans la base de données locale
      */
     public void saveReceivedFile(FileData file) {
-        // Marquer le fichier comme non lu puisqu'il vient d'être reçu
-        file.setRead(false);
-        fileDAO.saveFile(file);
+        try {
+            // Marquer le fichier comme non lu puisqu'il vient d'être reçu
+            file.setRead(false);
+            fileDAO.saveFile(file);
+
+            System.out.println("Fichier reçu de " + file.getSender() + " sauvegardé dans la BD: " + file.getFilename());
+
+            // Si la vue est disponible et que le fichier vient du partenaire de chat actuel,
+            // rafraîchir la liste des messages
+            if (chatView != null && currentChatPartner != null &&
+                    file.getSender().equals(currentChatPartner)) {
+
+                chatView.refreshMessages();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la sauvegarde du fichier reçu: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -354,6 +440,9 @@ public class ChatController {
      */
     public void disconnect() {
         try {
+            // Arrêter le listener de messages avant de fermer la connexion
+            socketManager.stopMessageListener();
+
             PeerRequest request = new PeerRequest(RequestType.DISCONNECT, null);
             socketManager.sendRequest(request);
             socketManager.closeConnection();

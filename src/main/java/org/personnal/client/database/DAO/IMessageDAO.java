@@ -9,5 +9,6 @@ public interface IMessageDAO {
     void saveMessage(Message message);
     List<Message> getMessagesWith(String username);
     void deleteMessageById(int id);
+    void markMessagesAsRead(String sender, String receiver);
 }
 

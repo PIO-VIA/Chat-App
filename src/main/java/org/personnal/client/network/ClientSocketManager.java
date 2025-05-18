@@ -1,6 +1,7 @@
 package org.personnal.client.network;
 
 import com.google.gson.Gson;
+import org.personnal.client.UI.ChatView;
 import org.personnal.client.protocol.PeerRequest;
 import org.personnal.client.protocol.PeerResponse;
 
@@ -15,6 +16,7 @@ public class ClientSocketManager {
     private BufferedReader input;
     private BufferedWriter output;
     private final Gson gson = new Gson();
+    private MessageListener messageListener;
 
     // Constructeur privé pour singleton
     private ClientSocketManager() {}
@@ -51,8 +53,35 @@ public class ClientSocketManager {
         return gson.fromJson(responseJson, PeerResponse.class);
     }
 
+    /**
+     * Démarre le listener de messages pour recevoir les messages entrants
+     * @param chatView Vue de chat pour afficher les messages
+     * @param username Nom d'utilisateur actuel
+     */
+    public void startMessageListener(ChatView chatView, String username) {
+        if (messageListener == null || !messageListener.isAlive()) {
+            messageListener = new MessageListener(input, chatView, username);
+            messageListener.start();
+            System.out.println("Message listener démarré pour " + username);
+        }
+    }
+
+    /**
+     * Arrête le listener de messages
+     */
+    public void stopMessageListener() {
+        if (messageListener != null) {
+            messageListener.stopListening();
+            messageListener = null;
+            System.out.println("Message listener arrêté");
+        }
+    }
+
     public void closeConnection() {
         try {
+            // Arrêter le listener de messages
+            stopMessageListener();
+
             if (input != null) input.close();
             if (output != null) output.close();
             if (socket != null && !socket.isClosed()) socket.close();
