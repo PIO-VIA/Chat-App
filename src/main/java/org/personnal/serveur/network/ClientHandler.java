@@ -9,13 +9,13 @@ import org.personnal.serveur.model.User;
 import org.personnal.serveur.protocol.PeerRequest;
 import org.personnal.serveur.protocol.PeerResponse;
 import org.personnal.serveur.protocol.RequestType;
-import org.personnal.serveur.network.SessionManager;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Base64;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientHandler implements Runnable {
 
@@ -26,8 +26,15 @@ public class ClientHandler implements Runnable {
     private BufferedReader reader;
     private BufferedWriter writer;
 
+    // Timestamp de la dernière activité pour détecter les clients inactifs
+    private long lastActivityTimestamp;
+
+    // Cache pour les sessions typant
+    private static final ConcurrentHashMap<String, TypingStatus> typingStatusMap = new ConcurrentHashMap<>();
+
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
+        this.lastActivityTimestamp = System.currentTimeMillis();
     }
 
     @Override
@@ -41,6 +48,9 @@ public class ClientHandler implements Runnable {
             while (running) {
                 String jsonLine = reader.readLine();
                 if (jsonLine == null) break;
+
+                // Mettre à jour le timestamp d'activité
+                this.lastActivityTimestamp = System.currentTimeMillis();
 
                 PeerRequest request;
                 try {
@@ -66,6 +76,9 @@ public class ClientHandler implements Runnable {
         } finally {
             if (username != null) {
                 SessionManager.removeUser(username);
+
+                // Nettoyer le statut de typing
+                typingStatusMap.remove(username);
             }
             try {
                 clientSocket.close();
@@ -97,11 +110,66 @@ public class ClientHandler implements Runnable {
                 return handleCheckUser(request.getPayload());
             case CHECK_ONLINE:
                 return handleCheckOnline(request.getPayload());
+            case PING:
+                return handlePing(request.getPayload());
+            case TYPING:
+                return handleTypingStatus(request.getPayload());
             case DISCONNECT:
                 return new PeerResponse(true, "👋 Déconnecté proprement.");
             default:
                 return new PeerResponse(false, "❌ Type de requête inconnu");
         }
+    }
+
+    /**
+     * Gère les requêtes de ping du client
+     * @param payload Les données du ping (peuvent contenir des infos additionnelles)
+     * @return Une réponse confirmant la réception du ping
+     */
+    private PeerResponse handlePing(Map<String, String> payload) {
+        // Log le ping si nécessaire pour le débogage
+        // System.out.println("Ping reçu de " + (username != null ? username : "client non identifié"));
+
+        // Mettre à jour le timestamp
+        this.lastActivityTimestamp = System.currentTimeMillis();
+
+        // Renvoyer une réponse simple
+        return new PeerResponse(true, "pong", Map.of("timestamp", String.valueOf(System.currentTimeMillis())));
+    }
+
+    /**
+     * Gère les notifications de statut de frappe (typing)
+     * @param payload Les données contenant l'émetteur et le destinataire
+     * @return Une réponse confirmant la réception
+     */
+    private PeerResponse handleTypingStatus(Map<String, String> payload) {
+        String sender = payload.get("sender");
+        String receiver = payload.get("receiver");
+        boolean isTyping = Boolean.parseBoolean(payload.get("typing"));
+
+        if (sender == null || receiver == null) {
+            return new PeerResponse(false, "❌ Données de typing incomplètes");
+        }
+
+        // Mettre à jour le statut dans la map
+        typingStatusMap.put(sender, new TypingStatus(receiver, isTyping, System.currentTimeMillis()));
+
+        // Transmettre le statut au destinataire s'il est connecté
+        ClientHandler receiverHandler = SessionManager.getUserHandler(receiver);
+        if (receiverHandler != null) {
+            try {
+                receiverHandler.sendJsonResponse(
+                        new PeerResponse(true, "typing_status", Map.of(
+                                "from", sender,
+                                "typing", String.valueOf(isTyping)
+                        ))
+                );
+            } catch (IOException e) {
+                System.err.println("❌ Erreur lors de l'envoi du statut typing: " + e.getMessage());
+            }
+        }
+
+        return new PeerResponse(true, "✅ Statut de frappe mis à jour");
     }
 
     private PeerResponse handleLogin(Map<String, String> payload) {
@@ -208,6 +276,10 @@ public class ClientHandler implements Runnable {
     private PeerResponse handleCheckOnline(Map<String, String> payload) {
         String usernameToCheck = payload.get("username");
 
+        if ("ping_test".equals(usernameToCheck)) {
+            return new PeerResponse(true, "ping_response", Map.of("timestamp", String.valueOf(System.currentTimeMillis())));
+        }
+
         if (usernameToCheck == null || usernameToCheck.trim().isEmpty()) {
             return new PeerResponse(false, "❌ Nom d'utilisateur non spécifié");
         }
@@ -231,6 +303,38 @@ public class ClientHandler implements Runnable {
             sendJsonResponse(new PeerResponse(true, "💬 Nouveau message reçu", payload));
         } catch (IOException e) {
             System.err.println("❌ Erreur envoi message direct : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Vérifie si ce client est inactif depuis trop longtemps
+     * @param timeoutMs Le temps d'inactivité considéré comme un timeout (en ms)
+     * @return true si le client doit être considéré comme inactif
+     */
+    public boolean isInactive(long timeoutMs) {
+        return (System.currentTimeMillis() - lastActivityTimestamp) > timeoutMs;
+    }
+
+    /**
+     * Obtient le timestamp de la dernière activité
+     * @return Le timestamp en millisecondes
+     */
+    public long getLastActivityTimestamp() {
+        return lastActivityTimestamp;
+    }
+
+    /**
+     * Classe interne pour stocker les états de frappe
+     */
+    private static class TypingStatus {
+        private final String receiver;
+        private final boolean isTyping;
+        private final long timestamp;
+
+        public TypingStatus(String receiver, boolean isTyping, long timestamp) {
+            this.receiver = receiver;
+            this.isTyping = isTyping;
+            this.timestamp = timestamp;
         }
     }
 }
