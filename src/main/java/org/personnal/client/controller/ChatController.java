@@ -19,15 +19,16 @@ import org.personnal.client.UI.ChatView;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ChatController {
     private final MainClient app;
@@ -42,14 +43,20 @@ public class ChatController {
     private final IMessageDAO messageDAO;
     private final IFileDAO fileDAO;
 
-    // Référence à la vue de chat (nécessaire pour le MessageListener)
+    // Référence à la vue de chat
     private ChatView chatView;
 
-    // Planificateur pour vérifier régulièrement l'état du listener
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    // Thread pool pour les opérations asynchrones
+    private final ExecutorService fileTransferExecutor = Executors.newFixedThreadPool(2);
 
     // Cache des utilisateurs pour éviter des requêtes répétées à la base de données
     private final Map<String, User> userCache = new ConcurrentHashMap<>();
+
+    // Cache des statuts en ligne
+    private final Map<String, Boolean> onlineStatusCache = new ConcurrentHashMap<>();
+
+    // Répertoire pour stocker les fichiers reçus
+    private final String filesDirectory;
 
     // Drapeau pour éviter les mises à jour UI trop fréquentes
     private volatile boolean refreshingContactList = false;
@@ -64,11 +71,30 @@ public class ChatController {
         this.messageDAO = new MessageDAO();
         this.fileDAO = new FileDAO();
 
+        // Créer le répertoire pour les fichiers reçus s'il n'existe pas
+        this.filesDirectory = "files/" + currentUsername;
+        createFilesDirectory();
+
         // Définir l'utilisateur courant comme propriété système pour les requêtes SQL
         System.setProperty("current.user", currentUsername);
 
         // Charger les contacts depuis la BD locale au démarrage
         loadContactsFromDatabase();
+    }
+
+    /**
+     * Crée le répertoire pour les fichiers reçus
+     */
+    private void createFilesDirectory() {
+        File directory = new File(filesDirectory);
+        if (!directory.exists()) {
+            boolean created = directory.mkdirs();
+            if (created) {
+                System.out.println("Répertoire des fichiers créé: " + filesDirectory);
+            } else {
+                System.err.println("Impossible de créer le répertoire des fichiers: " + filesDirectory);
+            }
+        }
     }
 
     /**
@@ -81,23 +107,19 @@ public class ChatController {
         // Démarrer le listener de messages
         socketManager.startMessageListener(chatView, currentUsername);
 
-        // Planifier une vérification régulière du listener (moins fréquente, 30 secondes)
-        scheduler.scheduleAtFixedRate(this::checkMessageListener, 30, 30, TimeUnit.SECONDS);
-
         System.out.println("ChatView configurée pour l'utilisateur " + currentUsername);
     }
 
     /**
-     * Vérifie l'état du MessageListener et le redémarre si nécessaire
+     * Vérifie si le listener de messages est actif et le redémarre si nécessaire
      */
-    private void checkMessageListener() {
+    public void checkAndRestartMessageListener() {
         if (!socketManager.isMessageListenerRunning() && chatView != null) {
             System.out.println("MessageListener n'est plus en exécution, redémarrage...");
 
             // Redémarrer sur le thread JavaFX
             Platform.runLater(() -> {
                 try {
-                    // Redémarrer le listener sans notification pour éviter de perturber l'utilisateur
                     socketManager.startMessageListener(chatView, currentUsername);
                 } catch (Exception e) {
                     System.err.println("Erreur lors du redémarrage du MessageListener: " + e.getMessage());
@@ -182,7 +204,7 @@ public class ChatController {
             }
 
             // Envoyer le message au serveur en arrière-plan
-            new Thread(() -> {
+            CompletableFuture.runAsync(() -> {
                 try {
                     // Envoyer la requête
                     PeerRequest request = new PeerRequest(RequestType.SEND_MESSAGE, payload);
@@ -198,9 +220,16 @@ public class ChatController {
                     }
                 } catch (IOException e) {
                     System.err.println("Erreur lors de l'envoi du message: " + e.getMessage());
-                    showNotification("Problème de connexion. Le message sera réessayé plus tard.");
+                    showNotification("Problème de connexion. Le message a été sauvegardé localement.");
+
+                    // Sauvegarder quand même le message en local pour avoir une trace
+                    try {
+                        messageDAO.saveMessage(message);
+                    } catch (Exception dbError) {
+                        System.err.println("Erreur supplémentaire lors de la sauvegarde en local: " + dbError.getMessage());
+                    }
                 }
-            }).start();
+            });
 
             return true;
         } catch (Exception e) {
@@ -292,8 +321,8 @@ public class ChatController {
         File file = chooseFile();
         if (file != null) {
             // Vérifier la taille du fichier
-            if (file.length() > 5 * 1024 * 1024) { // 5MB
-                showNotification("Le fichier est trop volumineux. Taille maximale: 5MB");
+            if (file.length() > 10 * 1024 * 1024) { // 10MB max
+                showNotification("Le fichier est trop volumineux. Taille maximale: 10MB");
                 return;
             }
 
@@ -302,7 +331,7 @@ public class ChatController {
             fileData.setSender(currentUsername);
             fileData.setReceiver(currentChatPartner);
             fileData.setFilename(file.getName());
-            fileData.setFilepath(file.getAbsolutePath());
+            fileData.setFilepath(saveFileLocally(file)); // Sauvegarder immédiatement une copie locale
             fileData.setTimestamp(LocalDateTime.now());
             fileData.setRead(true);
 
@@ -312,7 +341,7 @@ public class ChatController {
             }
 
             // Envoi en arrière-plan
-            new Thread(() -> {
+            fileTransferExecutor.submit(() -> {
                 try {
                     sendFileInBackground(currentChatPartner, file, fileData);
                 } catch (Exception e) {
@@ -321,7 +350,43 @@ public class ChatController {
                             showNotification("Erreur lors de l'envoi du fichier: " + e.getMessage())
                     );
                 }
-            }).start();
+            });
+        }
+    }
+
+    /**
+     * Ouvre un fichier
+     */
+    public void openFile(int fileId) {
+        // Récupérer les informations du fichier
+        FileData fileData = null;
+        if (fileDAO instanceof FileDAO) {
+            fileData = ((FileDAO) fileDAO).getFileById(fileId);
+        }
+
+        if (fileData == null || fileData.getFilepath() == null) {
+            showNotification("Fichier introuvable.");
+            return;
+        }
+
+        // Ouvrir le fichier avec l'application par défaut du système
+        try {
+            File file = new File(fileData.getFilepath());
+            if (!file.exists()) {
+                showNotification("Le fichier n'existe plus à cet emplacement.");
+                return;
+            }
+
+            // Utiliser la méthode appropriée selon le système d'exploitation
+            if (System.getProperty("os.name").toLowerCase().contains("win")) {
+                new ProcessBuilder("cmd", "/c", "start", "", file.getAbsolutePath()).start();
+            } else if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+                new ProcessBuilder("open", file.getAbsolutePath()).start();
+            } else {
+                new ProcessBuilder("xdg-open", file.getAbsolutePath()).start();
+            }
+        } catch (IOException e) {
+            showNotification("Erreur lors de l'ouverture du fichier: " + e.getMessage());
         }
     }
 
@@ -329,6 +394,28 @@ public class ChatController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choisir un fichier à envoyer");
         return fileChooser.showOpenDialog(null);
+    }
+
+    private String saveFileLocally(File file) {
+        try {
+            // Créer un nom de fichier unique (timestamp + nom original)
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String uniqueFilename = timestamp + "_" + file.getName();
+
+            // Chemin de destination
+            Path destination = Paths.get(filesDirectory, uniqueFilename);
+
+            // Créer le répertoire parent si nécessaire
+            Files.createDirectories(destination.getParent());
+
+            // Copier le fichier
+            Files.copy(file.toPath(), destination, StandardCopyOption.REPLACE_EXISTING);
+
+            return destination.toString();
+        } catch (IOException e) {
+            System.err.println("Erreur lors de la sauvegarde locale du fichier: " + e.getMessage());
+            return file.getAbsolutePath(); // Utiliser le chemin original en cas d'erreur
+        }
     }
 
     private void sendFileInBackground(String receiver, File file, FileData fileData) throws IOException {
@@ -379,6 +466,51 @@ public class ChatController {
     }
 
     /**
+     * Rafraîchit le statut en ligne de tous les contacts
+     * @return Map des statuts (nom d'utilisateur -> en ligne)
+     */
+    public Map<String, Boolean> refreshContactStatuses() {
+        // Copier la liste des contacts pour éviter les modifications concurrentes
+        List<String> contactsToCheck = List.copyOf(contacts);
+
+        // Map des résultats
+        Map<String, Boolean> results = new HashMap<>();
+
+        if (contactsToCheck.isEmpty()) {
+            return results;
+        }
+
+        try {
+            // Demander le statut au serveur pour chaque contact
+            for (String contact : contactsToCheck) {
+                boolean online = false;
+                try {
+                    Map<String, String> payload = new HashMap<>();
+                    payload.put("username", contact);
+
+                    PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, payload);
+                    socketManager.sendRequest(request);
+                    PeerResponse response = socketManager.readResponse();
+
+                    if (response.isSuccess()) {
+                        online = true;
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la vérification du statut de " + contact + ": " + e.getMessage());
+                }
+
+                // Mettre à jour le cache et les résultats
+                onlineStatusCache.put(contact, online);
+                results.put(contact, online);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors du rafraîchissement des statuts: " + e.getMessage());
+        }
+
+        return results;
+    }
+
+    /**
      * Ajoute un nouveau contact à la base de données locale
      * @param username Le nom d'utilisateur à ajouter comme contact
      * @param email L'email du contact
@@ -401,9 +533,11 @@ public class ChatController {
             userDAO.insert(newContact);
 
             // Mettre à jour les listes observables pour l'interface
-            contacts.add(username);
-            usersList.add(newContact);
-            userCache.put(username, newContact);
+            Platform.runLater(() -> {
+                contacts.add(username);
+                usersList.add(newContact);
+                userCache.put(username, newContact);
+            });
 
             return true;
         } catch (Exception e) {
@@ -423,9 +557,12 @@ public class ChatController {
                 userDAO.delete(userId);
 
                 // Mettre à jour les listes observables pour l'interface
-                contacts.remove(user.getUsername());
-                usersList.removeIf(u -> u.getIdUser() == userId);
-                userCache.remove(user.getUsername());
+                Platform.runLater(() -> {
+                    contacts.remove(user.getUsername());
+                    usersList.removeIf(u -> u.getIdUser() == userId);
+                    userCache.remove(user.getUsername());
+                    onlineStatusCache.remove(user.getUsername());
+                });
 
                 return true;
             }
@@ -471,10 +608,13 @@ public class ChatController {
     }
 
     /**
-     * Vérifie si un utilisateur est en ligne (délégué au SocketManager pour le cache)
+     * Vérifie si un utilisateur est en ligne
+     * Utilise le cache local pour éviter des requêtes répétées
      */
     public boolean isUserOnline(String username) {
-        return socketManager.isUserOnline(username);
+        Boolean status = onlineStatusCache.get(username);
+        // Par défaut, considérer que l'utilisateur est hors ligne s'il n'est pas dans le cache
+        return status != null && status;
     }
 
     /**
@@ -504,6 +644,14 @@ public class ChatController {
      */
     public void saveReceivedFile(FileData file) {
         try {
+            // Assurer que le chemin de fichier est défini
+            if (file.getFilepath() == null || file.getFilepath().isEmpty()) {
+                // Créer un chemin dans le répertoire des fichiers
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                String uniqueFilename = timestamp + "_" + file.getFilename();
+                file.setFilepath(Paths.get(filesDirectory, uniqueFilename).toString());
+            }
+
             // Marquer le fichier comme non lu puisqu'il vient d'être reçu
             file.setRead(false);
             fileDAO.saveFile(file);
@@ -526,8 +674,7 @@ public class ChatController {
      */
     public void disconnect() {
         try {
-            // Arrêter le planificateur
-            scheduler.shutdownNow();
+            fileTransferExecutor.shutdownNow();
 
             // Arrêter le listener de messages avant de fermer la connexion
             socketManager.stopMessageListener();

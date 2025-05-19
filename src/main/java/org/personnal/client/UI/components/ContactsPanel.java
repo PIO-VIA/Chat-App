@@ -17,10 +17,12 @@ import org.personnal.client.model.Message;
 import org.personnal.client.model.User;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
  * Composant pour la liste des contacts (panneau gauche)
+ * Version améliorée avec bouton de rafraîchissement explicite
  */
 public class ContactsPanel {
     // Panneau principal
@@ -35,6 +37,7 @@ public class ContactsPanel {
     private TextField searchContactField;
     private Button addContactButton;
     private Button refreshContactsButton;
+    private ProgressIndicator refreshProgress;
 
     // Actions et callbacks
     private final Consumer<String> onContactSelected;
@@ -150,7 +153,7 @@ public class ContactsPanel {
 
                     contactInfo.getChildren().addAll(contactName, lastMessageLabel);
 
-                    // Statut en ligne
+                    // Statut en ligne - nous utilisons maintenant le cache au lieu de faire des requêtes
                     Circle onlineStatus = new Circle(5);
                     onlineStatus.setFill(controller.isUserOnline(contact) ? Color.GREEN : Color.GRAY);
                     VBox.setMargin(onlineStatus, new Insets(5, 0, 0, 0));
@@ -206,17 +209,60 @@ public class ContactsPanel {
         Button settingsButton = new Button("⚙️");
         settingsButton.setOnAction(e -> onSettingsClicked.run());
 
-        // Bouton de rafraîchissement des contacts
+        // Bouton de rafraîchissement des contacts avec indicateur de progression
+        StackPane refreshStack = new StackPane();
         refreshContactsButton = new Button("🔄");
-        refreshContactsButton.setOnAction(e -> refreshContactList());
+        refreshContactsButton.setTooltip(new Tooltip("Rafraîchir le statut des contacts"));
+        refreshContactsButton.setOnAction(e -> refreshContactStatuses());
+
+        refreshProgress = new ProgressIndicator();
+        refreshProgress.setMaxSize(20, 20);
+        refreshProgress.setVisible(false);
+
+        refreshStack.getChildren().addAll(refreshContactsButton, refreshProgress);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        header.getChildren().addAll(avatarPane, usernameLabel, spacer, refreshContactsButton, settingsButton);
+        header.getChildren().addAll(avatarPane, usernameLabel, spacer, refreshStack, settingsButton);
         header.setStyle("-fx-border-color: #ddd; -fx-border-width: 0 0 1 0;");
 
         return header;
+    }
+
+    /**
+     * Rafraîchit le statut en ligne de tous les contacts
+     */
+    private void refreshContactStatuses() {
+        // Désactiver le bouton et afficher l'indicateur
+        refreshContactsButton.setDisable(true);
+        refreshProgress.setVisible(true);
+
+        // Lancer le rafraîchissement en arrière-plan
+        new Thread(() -> {
+            try {
+                // Récupérer le statut de tous les contacts
+                Map<String, Boolean> statuses = controller.refreshContactStatuses();
+
+                // Mettre à jour l'interface
+                Platform.runLater(() -> {
+                    // Rafraîchir la liste
+                    contactListView.refresh();
+
+                    // Réactiver le bouton et masquer l'indicateur
+                    refreshContactsButton.setDisable(false);
+                    refreshProgress.setVisible(false);
+                });
+            } catch (Exception e) {
+                System.err.println("Erreur lors du rafraîchissement des statuts: " + e.getMessage());
+
+                // Réactiver le bouton et masquer l'indicateur en cas d'erreur
+                Platform.runLater(() -> {
+                    refreshContactsButton.setDisable(false);
+                    refreshProgress.setVisible(false);
+                });
+            }
+        }).start();
     }
 
     /**

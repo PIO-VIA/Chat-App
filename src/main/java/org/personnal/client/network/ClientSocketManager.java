@@ -8,13 +8,12 @@ import org.personnal.client.protocol.RequestType;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ClientSocketManager {
@@ -30,22 +29,19 @@ public class ClientSocketManager {
     // Cache pour le statut en ligne (optimisation)
     private final Map<String, CachedStatus> onlineStatusCache = new HashMap<>();
 
-    // Planificateur pour le ping et nettoyage du cache
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-
     // Indicateur de l'état de la connexion
     private final AtomicBoolean isConnected = new AtomicBoolean(false);
 
+    // Paramètres de connexion
+    private String serverHost = "localhost";
+    private int serverPort = 5000;
+
     // Temps de timeout réduit
-    private static final int SOCKET_TIMEOUT = 10000; // 10 secondes au lieu de 30
+    private static final int SOCKET_TIMEOUT = 10000; // 10 secondes
 
     // Constructeur privé pour singleton
     private ClientSocketManager() {
-        // Démarrer le planificateur pour nettoyer le cache périodiquement
-        scheduler.scheduleAtFixedRate(this::clearExpiredCache, 60, 60, TimeUnit.SECONDS);
-
-        // Démarrer un planificateur pour envoyer périodiquement un ping au serveur
-        scheduler.scheduleAtFixedRate(this::pingServer, 30, 30, TimeUnit.SECONDS);
+        // On supprime les planificateurs automatiques qui ralentissent le client
     }
 
     public static ClientSocketManager getInstance() throws IOException {
@@ -58,6 +54,9 @@ public class ClientSocketManager {
 
     private void connect(String host, int port) throws IOException {
         try {
+            this.serverHost = host;
+            this.serverPort = port;
+
             socket = new Socket(host, port);
             socket.setSoTimeout(SOCKET_TIMEOUT);  // Timeout de lecture (10 sec)
             input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
@@ -120,15 +119,21 @@ public class ClientSocketManager {
 
     /**
      * Vérifie si un utilisateur est en ligne (avec cache)
+     * Cette méthode est désormais manuelle et n'est plus appelée automatiquement
      */
     public boolean isUserOnline(String username) {
-        // Vérifier dans le cache d'abord
+        // Vérifier le cache d'abord
         CachedStatus cachedStatus = onlineStatusCache.get(username);
         if (cachedStatus != null && !cachedStatus.isExpired()) {
             return cachedStatus.isOnline();
         }
 
         // Si pas dans le cache ou expiré, faire la requête réseau
+        if (!isConnected.get()) {
+            // En cas de déconnexion, retourner false
+            return false;
+        }
+
         try {
             Map<String, String> payload = new HashMap<>();
             payload.put("username", username);
@@ -154,9 +159,23 @@ public class ClientSocketManager {
     }
 
     /**
+     * Rafraîchit manuellement le statut en ligne de tous les contacts
+     * @param contactUsernames Liste des noms d'utilisateur des contacts
+     * @return Map des statuts mis à jour
+     */
+    public Map<String, Boolean> refreshOnlineStatus(Iterable<String> contactUsernames) {
+        Map<String, Boolean> results = new HashMap<>();
+
+        for (String username : contactUsernames) {
+            boolean online = isUserOnline(username);
+            results.put(username, online);
+        }
+
+        return results;
+    }
+
+    /**
      * Démarre le listener de messages pour recevoir les messages entrants
-     * @param chatView Vue de chat pour afficher les messages
-     * @param username Nom d'utilisateur actuel
      */
     public void startMessageListener(ChatView chatView, String username) {
         // Arrêter l'ancien listener s'il existe
@@ -207,9 +226,6 @@ public class ClientSocketManager {
      */
     public void closeConnection() {
         try {
-            // Arrêter les planificateurs
-            scheduler.shutdownNow();
-
             // Arrêter le listener de messages
             stopMessageListener();
 
@@ -222,46 +238,6 @@ public class ClientSocketManager {
             System.out.println("🔌 Connexion fermée");
         } catch (IOException e) {
             System.err.println("❌ Erreur lors de la fermeture de la connexion : " + e.getMessage());
-        }
-    }
-
-    /**
-     * Réinitialise la connexion en cas de problème
-     */
-    public void reconnect() throws IOException {
-        closeConnection();
-        connect("localhost", 5000);
-    }
-
-    /**
-     * Nettoie les statuts en ligne expirés du cache
-     */
-    private void clearExpiredCache() {
-        long now = System.currentTimeMillis();
-        onlineStatusCache.entrySet().removeIf(entry -> entry.getValue().getExpiryTime() < now);
-    }
-
-    /**
-     * Envoie un ping au serveur pour maintenir la connexion active
-     */
-    private void pingServer() {
-        if (!isConnected.get()) {
-            try {
-                reconnect();
-            } catch (IOException e) {
-                System.err.println("Échec de la reconnexion pendant le ping: " + e.getMessage());
-                return;
-            }
-        }
-
-        try {
-            PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, Map.of("username", "ping_test"));
-            sendRequest(request);
-            readResponse();
-            // L'important n'est pas la réponse mais de garder la connexion active
-        } catch (IOException e) {
-            System.err.println("Ping au serveur a échoué: " + e.getMessage());
-            isConnected.set(false);
         }
     }
 

@@ -9,14 +9,14 @@ import org.personnal.client.protocol.PeerResponse;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Classe qui écoute les messages entrants du serveur en arrière-plan
+ * Version simplifiée pour améliorer les performances
  */
 public class MessageListener extends Thread {
     private final BufferedReader input;
@@ -24,12 +24,6 @@ public class MessageListener extends Thread {
     private final String currentUsername;
     private volatile boolean running = true;
     private final Gson gson = new Gson();
-
-    // File d'attente pour les messages à traiter
-    private final Queue<Message> messageQueue = new ConcurrentLinkedQueue<>();
-
-    // Indicateur pour le traitement en cours
-    private volatile boolean processingMessages = false;
 
     public MessageListener(BufferedReader input, ChatView chatView, String currentUsername) {
         this.input = input;
@@ -54,15 +48,15 @@ public class MessageListener extends Thread {
                     break;
                 }
 
-                // Traiter la réponse du serveur sans bloquer le thread d'écoute
-                processResponseAsync(responseJson);
+                // Traiter la réponse du serveur
+                processResponse(responseJson);
 
             } catch (SocketTimeoutException e) {
                 // Simplement continuer d'écouter
                 continue;
             } catch (IOException e) {
                 if (running) {
-                    System.err.println("Erreur de lecture, nouvelle tentative dans 2s: " + e.getMessage());
+                    System.err.println("Erreur de lecture: " + e.getMessage());
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException ie) {
@@ -79,30 +73,27 @@ public class MessageListener extends Thread {
     }
 
     /**
-     * Traite la réponse JSON de manière asynchrone sans bloquer le thread d'écoute
+     * Traite la réponse JSON
      */
-    private void processResponseAsync(String responseJson) {
-        // Créer un thread séparé pour le traitement
-        new Thread(() -> {
-            try {
-                PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
+    private void processResponse(String responseJson) {
+        try {
+            PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
 
-                // Traiter selon le type de message
-                if (response.getMessage() != null && response.getMessage().contains("message reçu")) {
-                    handleNewMessage(response);
-                } else if (response.getMessage() != null && response.getMessage().contains("fichier")) {
-                    handleNewFile(response);
-                } else if (response.getData() instanceof Map) {
-                    Map<String, Object> dataMap = (Map<String, Object>) response.getData();
-                    if (dataMap.containsKey("content") &&
-                            (dataMap.containsKey("from") || dataMap.containsKey("sender"))) {
-                        handleGenericMessageData(dataMap);
-                    }
+            // Traiter selon le type de message
+            if (response.getMessage() != null && response.getMessage().contains("message reçu")) {
+                handleNewMessage(response);
+            } else if (response.getMessage() != null && response.getMessage().contains("fichier")) {
+                handleNewFile(response);
+            } else if (response.getData() instanceof Map) {
+                Map<String, Object> dataMap = (Map<String, Object>) response.getData();
+                if (dataMap.containsKey("content") &&
+                        (dataMap.containsKey("from") || dataMap.containsKey("sender"))) {
+                    handleGenericMessageData(dataMap);
                 }
-            } catch (Exception e) {
-                System.err.println("Erreur lors du traitement de la réponse: " + e.getMessage());
             }
-        }).start();
+        } catch (Exception e) {
+            System.err.println("Erreur lors du traitement de la réponse: " + e.getMessage());
+        }
     }
 
     /**
@@ -150,8 +141,13 @@ public class MessageListener extends Thread {
             }
 
             if (message != null) {
-                // Ajouter le message à la file d'attente et le traiter
-                addMessageToQueueAndProcess(message);
+                // Ajouter le message à l'interface utilisateur
+                final Message finalMessage = message;
+                Platform.runLater(() -> {
+                    if (chatView != null) {
+                        chatView.addMessageToConversation(finalMessage);
+                    }
+                });
             }
         } catch (Exception e) {
             System.err.println("Erreur lors du traitement du nouveau message: " + e.getMessage());
@@ -181,8 +177,12 @@ public class MessageListener extends Thread {
                 message.setTimestamp(LocalDateTime.now());
                 message.setRead(false);
 
-                // Ajouter le message à la file d'attente et le traiter
-                addMessageToQueueAndProcess(message);
+                // Ajouter le message à l'interface utilisateur
+                Platform.runLater(() -> {
+                    if (chatView != null) {
+                        chatView.addMessageToConversation(message);
+                    }
+                });
             }
         } catch (Exception e) {
             System.err.println("Erreur lors du traitement des données de message génériques: " + e.getMessage());
@@ -218,48 +218,6 @@ public class MessageListener extends Thread {
         } catch (Exception e) {
             System.err.println("Erreur lors du traitement du nouveau fichier: " + e.getMessage());
         }
-    }
-
-    /**
-     * Ajoute un message à la file d'attente et lance le traitement si nécessaire
-     */
-    private void addMessageToQueueAndProcess(Message message) {
-        messageQueue.add(message);
-
-        // Lancer le traitement s'il n'est pas déjà en cours
-        if (!processingMessages) {
-            processMessageQueue();
-        }
-    }
-
-    /**
-     * Traite les messages dans la file d'attente un par un
-     */
-    private void processMessageQueue() {
-        processingMessages = true;
-
-        // Traiter les messages sur le thread JavaFX
-        Platform.runLater(() -> {
-            try {
-                Message message;
-                // Traiter jusqu'à 10 messages maximum à la fois pour ne pas bloquer l'UI
-                int count = 0;
-                while ((message = messageQueue.poll()) != null && count < 10) {
-                    chatView.addMessageToConversation(message);
-                    count++;
-                }
-
-                // S'il reste des messages, planifier le traitement du reste
-                if (!messageQueue.isEmpty()) {
-                    Platform.runLater(this::processMessageQueue);
-                } else {
-                    processingMessages = false;
-                }
-            } catch (Exception e) {
-                System.err.println("Erreur lors du traitement de la file d'attente de messages: " + e.getMessage());
-                processingMessages = false;
-            }
-        });
     }
 
     /**
