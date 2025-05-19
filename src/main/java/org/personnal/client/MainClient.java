@@ -13,6 +13,7 @@ import org.personnal.client.controller.RegisterController;
 import org.personnal.client.network.ClientSocketManager;
 
 import java.io.IOException;
+import java.net.URL;
 
 public class MainClient extends Application {
 
@@ -43,13 +44,19 @@ public class MainClient extends Application {
         // Icône de l'application (à implémenter si vous avez une icône)
         // primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/images/icon.png")));
 
-        // Afficher la vue de login par défaut
-        showLoginView();
 
         Scene scene = new Scene(root, PREF_WIDTH, PREF_HEIGHT);
 
-        // Appliquer CSS global (à créer dans un fichier séparé)
-        // scene.getStylesheets().add(getClass().getResource("/styles/global.css").toExternalForm());
+        // Appliquer les CSS globaux
+        URL globalCssUrl = getClass().getResource("/styles/global.css");
+        if (globalCssUrl != null) {
+            scene.getStylesheets().add(globalCssUrl.toExternalForm());
+        } else {
+            System.err.println("ATTENTION: Le fichier CSS global n'a pas pu être chargé");
+        }
+        // Afficher la vue de login par défaut
+        showLoginView();
+
 
         primaryStage.setTitle("Alanya - Connexion");
         primaryStage.setScene(scene);
@@ -65,6 +72,25 @@ public class MainClient extends Application {
         primaryStage.setWidth(PREF_WIDTH);
         primaryStage.setHeight(PREF_HEIGHT);
         primaryStage.centerOnScreen();
+
+        // Appliquer le CSS d'authentification à la scène actuelle
+        Scene currentScene = primaryStage.getScene();
+        if (currentScene != null) {
+            // Supprimer les CSS précédents sauf le global
+            currentScene.getStylesheets().clear();
+
+            // Ajouter les CSS appropriés
+            URL globalCssUrl = getClass().getResource("/styles/global.css");
+            URL authCssUrl = getClass().getResource("/styles/auth.css");
+
+            if (globalCssUrl != null) {
+                currentScene.getStylesheets().add(globalCssUrl.toExternalForm());
+            }
+
+            if (authCssUrl != null) {
+                currentScene.getStylesheets().add(authCssUrl.toExternalForm());
+            }
+        }
     }
 
     public void showRegisterView() {
@@ -72,22 +98,28 @@ public class MainClient extends Application {
         RegisterView registerView = new RegisterView(this, registerController);
         root.getChildren().setAll(registerView.getView());
         primaryStage.setTitle("Alanya - Inscription");
+
+        // Le CSS d'authentification est déjà chargé depuis showLoginView
     }
 
     public void showChatView(String username) throws IOException {
         ChatController chatController = new ChatController(this, username);
         ChatView chatView = new ChatView(chatController);
 
-        // Animation de transition (optional - implémentation future)
-        // FadeTransition ft = new FadeTransition(Duration.millis(300), chatView.getView());
-        // ft.setFromValue(0.0);
-        // ft.setToValue(1.0);
-        // ft.play();
-
+        // Créer une nouvelle scène pour le chat
         Scene chatScene = new Scene(chatView.getView(), CHAT_WIDTH, CHAT_HEIGHT);
 
-        // Appliquer CSS spécifique au chat (à créer dans un fichier séparé)
-        // chatScene.getStylesheets().add(getClass().getResource("/styles/chat.css").toExternalForm());
+        // Appliquer les CSS pour l'interface de chat
+        URL globalCssUrl = getClass().getResource("/styles/global.css");
+        URL chatCssUrl = getClass().getResource("/styles/chat.css");
+
+        if (globalCssUrl != null) {
+            chatScene.getStylesheets().add(globalCssUrl.toExternalForm());
+        }
+
+        if (chatCssUrl != null) {
+            chatScene.getStylesheets().add(chatCssUrl.toExternalForm());
+        }
 
         primaryStage.setScene(chatScene);
         primaryStage.setTitle("💬 Alanya - Chat (" + username + ")");

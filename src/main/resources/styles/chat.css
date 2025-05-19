@@ -1,0 +1,236 @@
+/* Styles spécifiques pour la vue de chat */
+
+/* Panneau de contacts */
+.contacts-panel {
+    -fx-background-color: white;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0 1 0 0;
+}
+
+.contact-list {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+.contact-cell {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent -fx-mid-grey transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.contact-cell:hover {
+    -fx-background-color: -fx-light-grey;
+}
+
+.contact-cell:selected {
+    -fx-background-color: derive(-fx-primary-color, 80%);
+}
+
+.contact-name {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.contact-message {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-dark-grey;
+}
+
+.contact-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-dark-grey;
+}
+
+.contact-avatar {
+    -fx-fill: -fx-avatar-color;
+}
+
+.online-status {
+    -fx-fill: -fx-online-status;
+}
+
+.offline-status {
+    -fx-fill: -fx-offline-status;
+}
+
+.unread-badge {
+    -fx-fill: -fx-unread-indicator;
+}
+
+/* Entête des contacts */
+.contacts-header {
+    -fx-background-color: -fx-light-grey;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10px;
+}
+
+.user-avatar {
+    -fx-fill: -fx-primary-color;
+}
+
+.username-label {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+/* Barre de recherche */
+.search-bar {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0 0 1 0;
+}
+
+.add-contact-btn {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-max-width: 30px;
+    -fx-max-height: 30px;
+    -fx-background-radius: 15px;
+    -fx-padding: 0;
+}
+
+.search-field {
+    -fx-padding: 8px;
+    -fx-background-color: -fx-light-grey;
+    -fx-background-radius: 15px;
+    -fx-border-radius: 15px;
+    -fx-border-width: 0;
+}
+
+/* Zone de messages */
+.messages-panel {
+    -fx-background-color: -fx-chat-bg;
+}
+
+.message-list {
+    -fx-background-color: -fx-chat-bg;
+    -fx-padding: 10px;
+    -fx-border-width: 0;
+}
+
+.message-sent {
+    -fx-background-color: -fx-message-sent-bg;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 3, 0, 1, 1);
+}
+
+.message-received {
+    -fx-background-color: -fx-message-received-bg;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0, 1, 1);
+}
+
+.message-sender {
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-primary-color;
+}
+
+.message-content {
+    -fx-font-size: 14px;
+    -fx-wrap-text: true;
+}
+
+.message-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-dark-grey;
+}
+
+/* En-tête de la zone de messages */
+.messages-header {
+    -fx-background-color: -fx-light-grey;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10px 15px;
+}
+
+.contact-header-name {
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.typing-indicator {
+    -fx-font-style: italic;
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-dark-grey;
+}
+
+/* Zone de saisie de message */
+.message-input-area {
+    -fx-background-color: -fx-light-grey;
+    -fx-padding: 10px 15px;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 1 0 0 0;
+}
+
+.message-input-field {
+    -fx-background-color: white;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+    -fx-padding: 8px 15px;
+    -fx-border-color: -fx-mid-grey;
+}
+
+.send-button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-min-width: 35px;
+    -fx-min-height: 35px;
+    -fx-max-width: 35px;
+    -fx-max-height: 35px;
+    -fx-background-radius: 17.5px;
+    -fx-padding: 0;
+}
+
+.attach-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-dark-grey;
+    -fx-min-width: 35px;
+    -fx-min-height: 35px;
+    -fx-max-width: 35px;
+    -fx-max-height: 35px;
+    -fx-background-radius: 17.5px;
+    -fx-padding: 0;
+}
+
+.attach-button:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Éléments de fichier */
+.file-box {
+    -fx-padding: 5px;
+    -fx-background-color: rgba(0, 0, 0, 0.05);
+    -fx-background-radius: 5px;
+    -fx-spacing: 5px;
+}
+
+.file-icon {
+    -fx-font-size: 18px;
+}
+
+.file-name {
+    -fx-font-size: 13px;
+}
+
+.file-open-button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-padding: 3px 8px;
+    -fx-background-radius: 3px;
+}

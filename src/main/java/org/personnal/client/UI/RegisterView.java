@@ -4,11 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import org.personnal.client.MainClient;
 import org.personnal.client.controller.RegisterController;
 
@@ -31,47 +27,43 @@ public class RegisterView {
     }
 
     private void initUI() {
-        setupBackground();
+        // Appliquer la classe de style au layout principal
+        layout.getStyleClass().add("auth-background");
+
         VBox registerBox = createRegisterBox();
         setupCenterLayout(registerBox);
     }
 
-    private void setupBackground() {
-        layout.setStyle("-fx-background-color: linear-gradient(to right, #1a6fc7, #2e8ede);");
-    }
-
     private VBox createRegisterBox() {
         VBox registerBox = new VBox(15);
-        configureRegisterBox(registerBox);
-        addShadowEffect(registerBox);
+        registerBox.getStyleClass().add("auth-box");
         addComponentsToRegisterBox(registerBox);
         return registerBox;
     }
 
-    private void configureRegisterBox(VBox box) {
-        box.setPadding(new Insets(30));
-        box.setMaxSize(400, 400);
-        box.setMinSize(350, 350);
-        box.setPrefSize(400, 400);
-        box.setAlignment(Pos.CENTER);
-        box.setStyle("-fx-background-color: white; -fx-background-radius: 10px;");
-    }
-
-    private void addShadowEffect(VBox box) {
-        DropShadow dropShadow = new DropShadow();
-        dropShadow.setRadius(10.0);
-        dropShadow.setColor(Color.color(0, 0, 0, 0.3));
-        box.setEffect(dropShadow);
-    }
-
     private void addComponentsToRegisterBox(VBox box) {
-        Label appTitle = createLabel("ALANYA", 28, "#1a6fc7", FontWeight.BOLD);
-        Label subtitle = createLabel("Créer un compte", 16, "#555", FontWeight.NORMAL);
+        Label appTitle = new Label("ALANYA");
+        appTitle.getStyleClass().add("app-title");
 
-        usernameField = createTextField("Nom d'utilisateur");
-        emailField = createTextField("example@gmail.com");
-        passwordField = createPasswordField("Mot de passe");
-        confirmPasswordField = createPasswordField("Confirmer le mot de passe");
+        Label subtitle = new Label("Créer un compte");
+        subtitle.getStyleClass().add("app-subtitle");
+
+        usernameField = new TextField();
+        usernameField.setPromptText("Nom d'utilisateur");
+        usernameField.getStyleClass().add("auth-text-field");
+
+        emailField = new TextField();
+        emailField.setPromptText("example@gmail.com");
+        emailField.getStyleClass().add("auth-text-field");
+
+        passwordField = new PasswordField();
+        passwordField.setPromptText("Mot de passe");
+        passwordField.getStyleClass().add("auth-text-field");
+
+        confirmPasswordField = new PasswordField();
+        confirmPasswordField.setPromptText("Confirmer le mot de passe");
+        confirmPasswordField.getStyleClass().add("auth-text-field");
+
         Button registerBtn = createRegisterButton();
         Hyperlink loginLink = createLoginLink();
 
@@ -79,57 +71,16 @@ public class RegisterView {
                 passwordField, confirmPasswordField, registerBtn, loginLink);
     }
 
-    private Label createLabel(String text, int size, String color, FontWeight weight) {
-        Label label = new Label(text);
-        label.setFont(Font.font("Arial", weight, size));
-        label.setTextFill(Color.web(color));
-        return label;
-    }
-
-    private TextField createTextField(String prompt) {
-        TextField field = new TextField();
-        field.setPromptText(prompt);
-        applyFieldStyle(field);
-        return field;
-    }
-
-    private PasswordField createPasswordField(String prompt) {
-        PasswordField field = new PasswordField();
-        field.setPromptText(prompt);
-        applyFieldStyle(field);
-        return field;
-    }
-
-    private void applyFieldStyle(Control field) {
-        field.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 5px; " +
-                "-fx-border-color: #ddd; -fx-border-radius: 5px; -fx-padding: 10px;");
-    }
-
     private Button createRegisterButton() {
         Button button = new Button("S'INSCRIRE");
-        button.setMaxWidth(Double.MAX_VALUE);
-        applyButtonStyle(button, "#1a6fc7");
-
-        button.setOnMouseEntered(e -> applyButtonStyle(button, "#0d5fb7"));
-        button.setOnMouseExited(e -> applyButtonStyle(button, "#1a6fc7"));
+        button.getStyleClass().add("auth-button");
         button.setOnAction(this::handleRegisterAction);
-
         return button;
-    }
-
-    private void applyButtonStyle(Button button, String color) {
-        button.setStyle(
-                "-fx-background-color: " + color + "; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12px; " +
-                        "-fx-background-radius: 5px;"
-        );
     }
 
     private Hyperlink createLoginLink() {
         Hyperlink link = new Hyperlink("Déjà inscrit ? Connectez-vous");
-        link.setStyle("-fx-text-fill: #1a6fc7;");
+        link.getStyleClass().add("auth-link");
         link.setOnAction(e -> app.showLoginView());
         return link;
     }
@@ -168,11 +119,7 @@ public class RegisterView {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
-
-        DialogPane dialogPane = alert.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: white;");
-        dialogPane.getStyleClass().add("custom-alert");
-
+        alert.getDialogPane().getStyleClass().add("auth-alert");
         alert.showAndWait();
     }
 }

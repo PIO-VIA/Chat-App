@@ -8,8 +8,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
 import org.personnal.client.controller.ChatController;
@@ -22,7 +20,7 @@ import java.util.function.Consumer;
 
 /**
  * Composant pour la liste des contacts (panneau gauche)
- * Version améliorée avec bouton de rafraîchissement explicite
+ * Avec application des styles CSS
  */
 public class ContactsPanel {
     // Panneau principal
@@ -46,11 +44,6 @@ public class ContactsPanel {
 
     /**
      * Constructeur du panneau de contacts
-     * @param controller Contrôleur de chat
-     * @param contacts Liste observable des contacts
-     * @param onContactSelected Action à effectuer lors de la sélection d'un contact
-     * @param onAddContactClicked Action à effectuer lors du clic sur le bouton d'ajout de contact
-     * @param onSettingsClicked Action à effectuer lors du clic sur le bouton des paramètres
      */
     public ContactsPanel(ChatController controller, ObservableList<String> contacts,
                          Consumer<String> onContactSelected, Runnable onAddContactClicked,
@@ -61,6 +54,9 @@ public class ContactsPanel {
         this.onContactSelected = onContactSelected;
         this.onAddContactClicked = onAddContactClicked;
         this.onSettingsClicked = onSettingsClicked;
+
+        // Appliquer le style global au panneau
+        panel.getStyleClass().add("contacts-panel");
 
         setupPanel();
     }
@@ -77,15 +73,15 @@ public class ContactsPanel {
 
         // Liste des contacts
         contactListView = new ListView<>(contacts);
+        contactListView.getStyleClass().add("contact-list");
         contactListView.setCellFactory(createContactCellFactory());
 
         // Assemblage du panneau gauche
         panel.setTop(userHeader);
-        BorderPane.setMargin(userHeader, new Insets(10));
+        BorderPane.setMargin(userHeader, new Insets(0));
 
-        VBox centerContent = new VBox(10);
+        VBox centerContent = new VBox(0);
         centerContent.getChildren().addAll(searchBar, contactListView);
-        centerContent.setPadding(new Insets(0, 10, 10, 10));
         panel.setCenter(centerContent);
 
         // Observer la sélection de contact
@@ -107,7 +103,7 @@ public class ContactsPanel {
      * Crée la fabrique de cellules pour la liste des contacts
      */
     private Callback<ListView<String>, ListCell<String>> createContactCellFactory() {
-        return listView -> new ListCell<>() {
+        return listView -> new ListCell<String>() {
             @Override
             protected void updateItem(String contact, boolean empty) {
                 super.updateItem(contact, empty);
@@ -116,24 +112,25 @@ public class ContactsPanel {
                     setText(null);
                     setGraphic(null);
                 } else {
+                    // Appliquer le style CSS à la cellule
+                    getStyleClass().add("contact-cell");
+
                     HBox contactBox = new HBox(10);
                     contactBox.setAlignment(Pos.CENTER_LEFT);
-                    contactBox.setPadding(new Insets(5, 0, 5, 0));
 
                     // Avatar
-                    Circle avatar = new Circle(20, Color.LIGHTBLUE);
+                    Circle avatar = new Circle(20);
+                    avatar.getStyleClass().add("contact-avatar");
+
                     Text initial = new Text(contact.substring(0, 1).toUpperCase());
                     initial.setFill(Color.WHITE);
                     StackPane avatarPane = new StackPane(avatar, initial);
 
                     // Info contact
                     VBox contactInfo = new VBox(2);
-                    Label contactName = new Label(contact);
-                    contactName.setFont(Font.font("Arial", FontWeight.BOLD, 14));
 
-                    // Récupérer l'email du contact depuis la BD locale
-                    User user = controller.getUserByUsername(contact);
-                    String emailText = (user != null && user.getEmail() != null) ? user.getEmail() : "";
+                    Label contactName = new Label(contact);
+                    contactName.getStyleClass().add("contact-name");
 
                     // Récupérer le dernier message avec ce contact
                     String lastMessage = "";
@@ -148,14 +145,18 @@ public class ContactsPanel {
                     }
 
                     Label lastMessageLabel = new Label(lastMessage);
-                    lastMessageLabel.setFont(Font.font("Arial", 12));
-                    lastMessageLabel.setTextFill(Color.GRAY);
+                    lastMessageLabel.getStyleClass().add("contact-message");
 
                     contactInfo.getChildren().addAll(contactName, lastMessageLabel);
 
-                    // Statut en ligne - nous utilisons maintenant le cache au lieu de faire des requêtes
+                    // Statut en ligne
                     Circle onlineStatus = new Circle(5);
-                    onlineStatus.setFill(controller.isUserOnline(contact) ? Color.GREEN : Color.GRAY);
+                    if (controller.isUserOnline(contact)) {
+                        onlineStatus.getStyleClass().add("online-status");
+                    } else {
+                        onlineStatus.getStyleClass().add("offline-status");
+                    }
+
                     VBox.setMargin(onlineStatus, new Insets(5, 0, 0, 0));
 
                     // Indicateur de messages non lus
@@ -168,10 +169,11 @@ public class ContactsPanel {
                     }
 
                     if (hasUnreadMessages) {
-                        Circle unreadIndicator = new Circle(7, Color.RED);
+                        Circle unreadIndicator = new Circle(7);
+                        unreadIndicator.getStyleClass().add("unread-badge");
+
                         Text unreadCount = new Text("!");
                         unreadCount.setFill(Color.WHITE);
-                        unreadCount.setFont(Font.font("Arial", FontWeight.BOLD, 9));
                         StackPane unreadBadge = new StackPane(unreadIndicator, unreadCount);
                         contactBox.getChildren().add(unreadBadge);
                     }
@@ -180,7 +182,6 @@ public class ContactsPanel {
                     contactBox.getChildren().addAll(avatarPane, contactInfo, onlineStatus);
 
                     setGraphic(contactBox);
-                    setText(null);
                 }
             }
         };
@@ -191,27 +192,30 @@ public class ContactsPanel {
      */
     private HBox createUserHeader() {
         HBox header = new HBox(10);
+        header.getStyleClass().add("contacts-header");
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(10));
 
         // Avatar de l'utilisateur
         Circle userAvatar = new Circle(20);
-        userAvatar.setFill(Color.ROYALBLUE);
+        userAvatar.getStyleClass().add("user-avatar");
+
         Text userInitial = new Text(controller.getCurrentUsername().substring(0, 1).toUpperCase());
         userInitial.setFill(Color.WHITE);
         StackPane avatarPane = new StackPane(userAvatar, userInitial);
 
         // Nom d'utilisateur
         Label usernameLabel = new Label(controller.getCurrentUsername());
-        usernameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        usernameLabel.getStyleClass().add("username-label");
 
         // Bouton de paramètres
         Button settingsButton = new Button("⚙️");
+        settingsButton.getStyleClass().add("icon-button");
         settingsButton.setOnAction(e -> onSettingsClicked.run());
 
         // Bouton de rafraîchissement des contacts avec indicateur de progression
         StackPane refreshStack = new StackPane();
         refreshContactsButton = new Button("🔄");
+        refreshContactsButton.getStyleClass().add("icon-button");
         refreshContactsButton.setTooltip(new Tooltip("Rafraîchir le statut des contacts"));
         refreshContactsButton.setOnAction(e -> refreshContactStatuses());
 
@@ -225,7 +229,6 @@ public class ContactsPanel {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         header.getChildren().addAll(avatarPane, usernameLabel, spacer, refreshStack, settingsButton);
-        header.setStyle("-fx-border-color: #ddd; -fx-border-width: 0 0 1 0;");
 
         return header;
     }
@@ -270,12 +273,15 @@ public class ContactsPanel {
      */
     private HBox createSearchBar() {
         HBox searchBar = new HBox(10);
+        searchBar.getStyleClass().add("search-bar");
         searchBar.setAlignment(Pos.CENTER);
 
         // Champ de recherche
         searchContactField = new TextField();
         searchContactField.setPromptText("Rechercher ou commencer une discussion");
+        searchContactField.getStyleClass().add("search-field");
         HBox.setHgrow(searchContactField, Priority.ALWAYS);
+
         searchContactField.textProperty().addListener((observable, oldValue, newValue) -> {
             controller.filterContacts(newValue);
             // La liste des contacts sera mise à jour par le controller
@@ -285,7 +291,7 @@ public class ContactsPanel {
 
         // Bouton d'ajout de contact
         addContactButton = new Button("+");
-        addContactButton.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
+        addContactButton.getStyleClass().add("add-contact-btn");
         addContactButton.setOnAction(e -> onAddContactClicked.run());
 
         searchBar.getChildren().addAll(searchContactField, addContactButton);
@@ -313,13 +319,14 @@ public class ContactsPanel {
                     if (!contact.equals(currentChatPartner)) {
                         ListCell<String> cell = (ListCell<String>) contactListView.lookup(".list-cell:filled:selected");
                         if (cell != null && cell.getIndex() == finalI) {
-                            cell.setStyle("-fx-background-color: #e6f7ff;");
+                            cell.getStyleClass().add("new-message-highlight");
+
                             // Rétablir le style après un certain temps
                             new java.util.Timer().schedule(
                                     new java.util.TimerTask() {
                                         @Override
                                         public void run() {
-                                            Platform.runLater(() -> cell.setStyle(""));
+                                            Platform.runLater(() -> cell.getStyleClass().remove("new-message-highlight"));
                                         }
                                     }, 2000 // 2 secondes
                             );

@@ -17,6 +17,7 @@ import org.personnal.client.UI.dialogs.DialogManager;
 /**
  * Vue principale de l'application de chat
  * Coordonne les composants de la liste des contacts et des messages
+ * Avec application des styles CSS
  */
 public class ChatView {
     // Composants principaux de l'interface
@@ -51,7 +52,10 @@ public class ChatView {
 
         // Initialiser les composants principaux
         mainView = new BorderPane();
+        mainView.getStyleClass().add("main-view");
+
         splitPane = new SplitPane();
+        splitPane.getStyleClass().add("chat-split-pane");
 
         // Initialiser les panneaux
         contactsPanel = new ContactsPanel(controller, contacts, this::switchConversation,
@@ -64,7 +68,6 @@ public class ChatView {
 
         // Configuration globale
         mainView.setCenter(splitPane);
-        applyStyles();
 
         // Charger les contacts depuis la BD locale
         updateContactList();
@@ -83,13 +86,6 @@ public class ChatView {
 
         contactsPanel.getPanel().setPrefWidth(LEFT_PANEL_WIDTH);
         messagesPanel.getPanel().setMinWidth(RIGHT_PANEL_MIN_WIDTH);
-    }
-
-    /**
-     * Applique les styles globaux aux composants
-     */
-    private void applyStyles() {
-        mainView.setStyle("-fx-background-color: white;");
     }
 
     /**
@@ -128,6 +124,9 @@ public class ChatView {
     private void sendMessage() {
         String content = messagesPanel.getMessageText();
         if (!content.isEmpty() && currentChatPartner != null) {
+            // Afficher l'indicateur d'envoi
+            messagesPanel.showSendingIndicator(true);
+
             boolean success = controller.sendMessage(currentChatPartner, content);
             if (success) {
                 messagesPanel.clearMessageInput();
@@ -141,7 +140,13 @@ public class ChatView {
                     if (!messages.isEmpty()) {
                         messagesPanel.scrollToLastMessage();
                     }
+
+                    // Masquer l'indicateur d'envoi
+                    messagesPanel.showSendingIndicator(false);
                 });
+            } else {
+                // Masquer l'indicateur d'envoi en cas d'échec
+                messagesPanel.showSendingIndicator(false);
             }
         }
     }

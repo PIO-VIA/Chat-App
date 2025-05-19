@@ -1,0 +1,71 @@
+/* Styles pour les vues d'authentification (login/register) */
+
+.auth-background {
+    -fx-background-color: linear-gradient(to right, -fx-primary-color, -fx-secondary-color);
+}
+
+.auth-box {
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-padding: 30px;
+    -fx-spacing: 15px;
+    -fx-alignment: center;
+    -fx-max-width: 400px;
+    -fx-min-width: 350px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 0);
+}
+
+.app-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary-color;
+}
+
+.app-subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: -fx-dark-grey;
+}
+
+.auth-text-field {
+    -fx-background-color: -fx-light-grey;
+    -fx-background-radius: 5px;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-radius: 5px;
+    -fx-padding: 10px;
+}
+
+.auth-button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 12px;
+    -fx-background-radius: 5px;
+    -fx-max-width: infinity;
+}
+
+.auth-button:hover {
+    -fx-background-color: derive(-fx-primary-color, -10%);
+}
+
+.auth-link {
+    -fx-text-fill: -fx-primary-color;
+    -fx-border-color: transparent;
+}
+
+.auth-alert .dialog-pane {
+    -fx-background-color: white;
+}
+
+.auth-alert .header-panel {
+    -fx-background-color: -fx-primary-color;
+}
+
+.auth-alert .header-panel .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.auth-alert .button-bar .button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+}
