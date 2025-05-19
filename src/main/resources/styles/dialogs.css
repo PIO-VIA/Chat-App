@@ -1,0 +1,229 @@
+/* Styles simplifiés pour les dialogues et fenêtres modales */
+
+/* Styles généraux pour les dialogues */
+.dialog-pane {
+    -fx-background-color: white;
+    -fx-padding: 10px;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: -fx-primary-color;
+    -fx-padding: 10px;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .content {
+    -fx-padding: 15px;
+}
+
+.dialog-pane .button-bar {
+    -fx-padding: 10px;
+}
+
+.dialog-pane .button-bar .button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 15px;
+    -fx-background-radius: 5px;
+}
+
+.dialog-pane .button-bar .button:hover {
+    -fx-background-color: derive(-fx-primary-color, -10%);
+}
+
+.dialog-pane .button-bar .button:pressed {
+    -fx-background-color: derive(-fx-primary-color, -20%);
+}
+
+/* Fenêtre de paramètres */
+.settings-dialog {
+    -fx-background-color: white;
+}
+
+.settings-dialog .tab-pane {
+    -fx-padding: 10px;
+}
+
+.settings-tab {
+    -fx-background-color: white;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0;
+    -fx-padding: 15px;
+}
+
+.settings-tab-header {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary-color;
+    -fx-padding: 0 0 10px 0;
+}
+
+.settings-section {
+    -fx-background-color: -fx-light-grey;
+    -fx-background-radius: 5px;
+    -fx-padding: 15px;
+    -fx-spacing: 10px;
+}
+
+.settings-section-header {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-dark-grey;
+    -fx-padding: 0 0 5px 0;
+}
+
+.settings-label {
+    -fx-font-size: 13px;
+}
+
+.settings-button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 15px;
+    -fx-background-radius: 5px;
+}
+
+.settings-button:hover {
+    -fx-background-color: derive(-fx-primary-color, -10%);
+}
+
+.settings-button.cancel-button {
+    -fx-background-color: -fx-light-grey;
+    -fx-text-fill: -fx-dark-grey;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-radius: 5px;
+}
+
+.settings-button.cancel-button:hover {
+    -fx-background-color: derive(-fx-light-grey, -5%);
+}
+
+.settings-button.destructive-button {
+    -fx-background-color: #e74c3c;
+}
+
+.settings-button.destructive-button:hover {
+    -fx-background-color: derive(#e74c3c, -10%);
+}
+
+/* Style pour les onglets */
+.settings-tab-pane {
+    -fx-tab-min-width: 120px;
+}
+
+.settings-tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: -fx-light-grey;
+}
+
+.settings-tab-pane .tab {
+    -fx-background-color: white;
+    -fx-padding: 8px 15px;
+    -fx-background-radius: 5 5 0 0;
+}
+
+.settings-tab-pane .tab:selected {
+    -fx-background-color: -fx-primary-color;
+}
+
+.settings-tab-pane .tab:selected .tab-label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.settings-tab-pane .tab .tab-label {
+    -fx-font-size: 13px;
+    -fx-alignment: center;
+}
+
+.settings-tab-pane .tab-content-area {
+    -fx-background-color: white;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 1px 0 0 0;
+}
+
+/* Styles spécifiques aux sections */
+.profile-section {
+    -fx-spacing: 15px;
+}
+
+.profile-header {
+    -fx-spacing: 15px;
+    -fx-alignment: center-left;
+}
+
+.profile-avatar {
+    -fx-fill: -fx-primary-color;
+}
+
+.profile-username {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+/* Style pour le gestionnaire de fichiers */
+.file-manager-dialog {
+    -fx-background-color: white;
+}
+
+.file-table {
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 1px;
+}
+
+.file-table .column-header {
+    -fx-background-color: -fx-light-grey;
+    -fx-padding: 10px;
+    -fx-font-weight: bold;
+}
+
+.file-table .table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent -fx-mid-grey transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.file-table .table-row-cell:selected {
+    -fx-background-color: derive(-fx-primary-color, 80%);
+}
+
+.file-table .table-row-cell:hover {
+    -fx-background-color: derive(-fx-light-grey, 50%);
+}
+
+.file-filter-box {
+    -fx-spacing: 10px;
+    -fx-padding: 10px;
+    -fx-background-color: -fx-light-grey;
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Gestionnaire de contacts */
+.contact-manager-section {
+    -fx-spacing: 10px;
+}
+
+.contact-list-view {
+    -fx-border-color: -fx-mid-grey;
+    -fx-border-width: 1px;
+    -fx-min-height: 200px;
+}
+
+.file-action-button {
+    -fx-background-color: -fx-primary-color;
+    -fx-text-fill: white;
+    -fx-padding: 5px 10px;
+    -fx-background-radius: 3px;
+    -fx-font-size: 12px;
+}
+
+.file-action-button:hover {
+    -fx-background-color: derive(-fx-primary-color, -10%);
+}

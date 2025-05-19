@@ -2,239 +2,351 @@ package org.personnal.client.UI.dialogs;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
-import javafx.util.Pair;
-import org.personnal.client.UI.ChatView;
+import javafx.stage.Stage;
 import org.personnal.client.controller.ChatController;
 import org.personnal.client.model.User;
 
 import java.util.Optional;
 
 /**
- * Gestionnaire des boîtes de dialogue
+ * Classe pour gérer tous les dialogues de l'application avec styles améliorés
  */
 public class DialogManager {
     private final ChatController controller;
-    private final ChatView chatView;
+    private final Stage mainStage;
 
-    /**
-     * Constructeur du gestionnaire de dialogues
-     * @param controller Contrôleur de chat
-     * @param chatView Vue de chat
-     */
-    public DialogManager(ChatController controller, ChatView chatView) {
+    // Constantes pour les icônes (à remplacer par les chemins réels vers vos icônes)
+    private static final String ICON_USER = "\uf007";       // FontAwesome user icon
+    private static final String ICON_SETTINGS = "\uf013";   // FontAwesome settings icon
+    private static final String ICON_FILES = "\uf15b";      // FontAwesome file icon
+    private static final String ICON_EMAIL = "\uf0e0";      // FontAwesome email icon
+    private static final String ICON_KEY = "\uf084";        // FontAwesome key icon
+    private static final String ICON_LOGOUT = "\uf08b";     // FontAwesome sign-out icon
+    private static final String ICON_CONTACTS = "\uf0c0";   // FontAwesome users icon
+    private static final String ICON_ADD = "\uf067";        // FontAwesome plus icon
+    private static final String ICON_TRASH = "\uf1f8";      // FontAwesome trash icon
+
+    public DialogManager(ChatController controller, Stage mainStage) {
         this.controller = controller;
-        this.chatView = chatView;
+        this.mainStage = mainStage;
     }
 
     /**
-     * Affiche le dialogue d'ajout de contact
+     * Affiche le dialogue d'ajout de contact avec style amélioré
      */
     public void showAddContactDialog() {
-        // Créer un dialogue personnalisé
-        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        Dialog<ButtonType> dialog = new Dialog<>();
+        // Ne pas définir le propriétaire pour éviter les erreurs
         dialog.setTitle("Ajouter un contact");
-        dialog.setHeaderText("Entrez les informations du contact à ajouter");
+        dialog.setHeaderText("Ajouter un nouveau contact");
 
-        // Définir les boutons
+        // Appliquer les classes CSS
+        DialogPane dialogPane = dialog.getDialogPane();
+        dialogPane.getStyleClass().add("dialog-pane");
+
+        // Icône en haut à gauche
+        Label iconLabel = new Label(ICON_ADD);
+        iconLabel.setFont(Font.font("FontAwesome", 24));
+        iconLabel.setTextFill(Color.WHITE);
+        dialogPane.setGraphic(iconLabel);
+
+        // Boutons
         ButtonType addButtonType = new ButtonType("Ajouter", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+        dialogPane.getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
 
-        // Créer les champs du formulaire
+        // Style des boutons
+        Button addButton = (Button) dialogPane.lookupButton(addButtonType);
+        addButton.getStyleClass().add("settings-button");
+
+        Button cancelButton = (Button) dialogPane.lookupButton(ButtonType.CANCEL);
+        cancelButton.getStyleClass().add("settings-button");
+        cancelButton.getStyleClass().add("cancel-button");
+
+        // Formulaire
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setPadding(new Insets(20));
+
+        // Icônes pour les champs
+        Label userIcon = new Label(ICON_USER);
+        userIcon.setFont(Font.font("FontAwesome", 16));
+        userIcon.setTextFill(Color.valueOf("#1a6fc7"));
+
+        Label emailIcon = new Label(ICON_EMAIL);
+        emailIcon.setFont(Font.font("FontAwesome", 16));
+        emailIcon.setTextFill(Color.valueOf("#1a6fc7"));
 
         TextField usernameField = new TextField();
         usernameField.setPromptText("Nom d'utilisateur");
-        TextField emailField = new TextField();
-        emailField.setPromptText("Email");
+        usernameField.getStyleClass().add("text-field");
 
-        grid.add(new Label("Nom d'utilisateur:"), 0, 0);
+        TextField emailField = new TextField();
+        emailField.setPromptText("Email (optionnel)");
+        emailField.getStyleClass().add("text-field");
+
+        grid.add(userIcon, 0, 0);
         grid.add(usernameField, 1, 0);
-        grid.add(new Label("Email:"), 0, 1);
+        grid.add(emailIcon, 0, 1);
         grid.add(emailField, 1, 1);
+
+        // Explication
+        Label infoLabel = new Label("Entrez le nom d'utilisateur exact du contact que vous souhaitez ajouter. " +
+                "L'email est optionnel et peut vous aider à identifier votre contact.");
+        infoLabel.setWrapText(true);
+        infoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+        grid.add(infoLabel, 0, 2, 2, 1);
 
         dialog.getDialogPane().setContent(grid);
 
-        // Donner le focus au champ username
-        Platform.runLater(() -> usernameField.requestFocus());
+        // Traitement du résultat - en utilisant Platform.runLater pour éviter les problèmes
+        Platform.runLater(() -> {
+            Optional<ButtonType> result = dialog.showAndWait();
+            if (result.isPresent() && result.get() == addButtonType) {
+                String username = usernameField.getText().trim();
+                String email = emailField.getText().trim();
 
-        // Convertir le résultat du dialogue
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == addButtonType) {
-                return new Pair<>(usernameField.getText(), emailField.getText());
-            }
-            return null;
-        });
-
-        // Afficher le dialogue et traiter le résultat
-        dialog.showAndWait().ifPresent(usernameEmail -> {
-            String username = usernameEmail.getKey().trim();
-            String email = usernameEmail.getValue().trim();
-
-            if (!username.isEmpty()) {
-                boolean added = controller.addContact(username, email);
-                if (added) {
-                    // Rafraîchir la liste des contacts depuis la BD locale
-                    chatView.updateContactList();
-
-                    // Afficher un message de confirmation
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Contact ajouté");
-                    alert.setHeaderText(null);
-                    alert.setContentText("Le contact " + username + " a été ajouté avec succès à votre liste de contacts.");
-                    alert.showAndWait();
-                } else {
-                    // Afficher un message d'erreur
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Erreur");
-                    alert.setHeaderText(null);
-                    alert.setContentText("Impossible d'ajouter le contact " + username + ".\nVérifiez que l'utilisateur existe et qu'il n'est pas déjà dans vos contacts.");
-                    alert.showAndWait();
-                }
-            }
-        });
-    }
-
-    /**
-     * Affiche le dialogue des paramètres
-     */
-    public void showSettingsDialog() {
-        // Créer un dialogue pour les paramètres
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Paramètres");
-        dialog.setHeaderText("Paramètres utilisateur");
-
-        // Ajouter des onglets pour différentes sections
-        TabPane tabPane = new TabPane();
-        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-
-        // Onglet Profil
-        Tab profileTab = new Tab("Profil");
-        GridPane profileGrid = new GridPane();
-        profileGrid.setHgap(10);
-        profileGrid.setVgap(10);
-        profileGrid.setPadding(new Insets(20, 150, 10, 10));
-
-        // Informations sur l'utilisateur actuel
-        Label usernameLabel = new Label("Nom d'utilisateur: " + controller.getCurrentUsername());
-        Label statusLabel = new Label("Statut: En ligne");
-
-        profileGrid.add(usernameLabel, 0, 0);
-        profileGrid.add(statusLabel, 0, 1);
-
-        // Bouton de déconnexion
-        Button logoutButton = new Button("Déconnexion");
-        logoutButton.setOnAction(e -> {
-            controller.disconnect();
-            dialog.close();
-            // Rediriger vers l'écran de connexion (à implémenter)
-        });
-
-        profileGrid.add(logoutButton, 0, 3);
-        profileTab.setContent(profileGrid);
-
-        // Onglet Contacts
-        Tab contactsTab = new Tab("Contacts");
-        VBox contactsBox = new VBox(10);
-        contactsBox.setPadding(new Insets(10));
-
-        // Liste des contacts pour gestion (suppression, blocage, etc.)
-        ListView<User> contactsListView = new ListView<>();
-        contactsListView.setItems(controller.getUsersList());
-        contactsListView.setCellFactory(listView -> new ListCell<>() {
-            @Override
-            protected void updateItem(User user, boolean empty) {
-                super.updateItem(user, empty);
-                if (empty || user == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    HBox box = new HBox(10);
-                    box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-                    // Avatar
-                    Circle avatar = new Circle(15, Color.LIGHTBLUE);
-                    Text initial = new Text(user.getUsername().substring(0, 1).toUpperCase());
-                    initial.setFill(Color.WHITE);
-                    StackPane avatarPane = new StackPane(avatar, initial);
-
-                    // Infos utilisateur
-                    VBox userInfo = new VBox(2);
-                    Label username = new Label(user.getUsername());
-                    username.setFont(Font.font("Arial", FontWeight.BOLD, 13));
-                    Label email = new Label(user.getEmail() != null ? user.getEmail() : "");
-                    email.setFont(Font.font("Arial", 11));
-                    email.setTextFill(Color.GRAY);
-
-                    userInfo.getChildren().addAll(username, email);
-                    box.getChildren().addAll(avatarPane, userInfo);
-
-                    setGraphic(box);
-                }
-            }
-        });
-
-        Button deleteContactButton = new Button("Supprimer le contact sélectionné");
-        deleteContactButton.setDisable(true);
-
-        contactsListView.getSelectionModel().selectedItemProperty().addListener((obs, old, newValue) ->
-                deleteContactButton.setDisable(newValue == null));
-
-        deleteContactButton.setOnAction(e -> {
-            User selectedUser = contactsListView.getSelectionModel().getSelectedItem();
-            if (selectedUser != null) {
-                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                confirmAlert.setTitle("Confirmation");
-                confirmAlert.setHeaderText("Supprimer un contact");
-                confirmAlert.setContentText("Êtes-vous sûr de vouloir supprimer " + selectedUser.getUsername() + " de vos contacts?");
-
-                Optional<ButtonType> result = confirmAlert.showAndWait();
-                if (result.isPresent() && result.get() == ButtonType.OK) {
-                    // Supprimer le contact de la BD locale
-                    if (controller.deleteContact(selectedUser.getIdUser())) {
-                        // Mettre à jour la liste des contacts
-                        contactsListView.setItems(controller.getUsersList());
-                        chatView.updateContactList();
-
-                        // Afficher un message de confirmation
-                        Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                        successAlert.setTitle("Contact supprimé");
-                        successAlert.setHeaderText(null);
-                        successAlert.setContentText("Le contact a été supprimé avec succès.");
-                        successAlert.showAndWait();
+                if (!username.isEmpty()) {
+                    if (controller.addContact(username, email)) {
+                        showAlert(Alert.AlertType.INFORMATION, "Contact ajouté",
+                                "Le contact " + username + " a été ajouté avec succès.");
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Erreur",
+                                "Impossible d'ajouter le contact. Vérifiez que l'utilisateur existe et n'est pas déjà dans vos contacts.");
                     }
                 }
             }
         });
+    }
 
-        contactsBox.getChildren().addAll(
-                new Label("Gérer vos contacts:"),
-                contactsListView,
-                deleteContactButton
-        );
+    /**
+     * Affiche le dialogue des paramètres avec style amélioré
+     */
+    public void showSettingsDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        // Ne pas définir le propriétaire pour éviter les erreurs
+        dialog.setTitle("Paramètres");
+        dialog.setHeaderText("Paramètres utilisateur");
 
-        contactsTab.setContent(contactsBox);
+        // Appliquer les classes CSS
+        DialogPane dialogPane = dialog.getDialogPane();
+        dialogPane.getStyleClass().addAll("dialog-pane", "settings-dialog");
+        dialogPane.setPrefWidth(500);
+        dialogPane.setPrefHeight(400);
 
-        // Ajouter les onglets au TabPane
+        // Icône en haut à gauche
+        Label iconLabel = new Label(ICON_SETTINGS);
+        iconLabel.setFont(Font.font("FontAwesome", 24));
+        iconLabel.setTextFill(Color.WHITE);
+        dialogPane.setGraphic(iconLabel);
+
+        // Onglets
+        TabPane tabPane = new TabPane();
+        tabPane.getStyleClass().add("settings-tab-pane");
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        // Onglet Profil
+        Tab profileTab = new Tab("Profil");
+        profileTab.setGraphic(createTabIcon(ICON_USER));
+
+        VBox profileContent = new VBox(20);
+        profileContent.getStyleClass().addAll("settings-tab", "profile-section");
+
+        HBox profileHeader = new HBox(15);
+        profileHeader.getStyleClass().add("profile-header");
+
+        // Avatar de l'utilisateur
+        Circle avatar = new Circle(30);
+        avatar.getStyleClass().add("profile-avatar");
+        Text initial = new Text(controller.getCurrentUsername().substring(0, 1).toUpperCase());
+        initial.setFill(Color.WHITE);
+        StackPane avatarPane = new StackPane(avatar, initial);
+
+        VBox userInfo = new VBox(5);
+        Label usernameLabel = new Label(controller.getCurrentUsername());
+        usernameLabel.getStyleClass().add("profile-username");
+
+        userInfo.getChildren().addAll(usernameLabel);
+        profileHeader.getChildren().addAll(avatarPane, userInfo);
+
+        // Sections des paramètres
+        VBox accountSection = new VBox(10);
+        accountSection.getStyleClass().add("settings-section");
+
+        Label accountHeader = new Label("Compte");
+        accountHeader.getStyleClass().add("settings-section-header");
+
+        Button logoutButton = new Button("Déconnexion");
+        logoutButton.setGraphic(createButtonIcon(ICON_LOGOUT));
+        logoutButton.getStyleClass().add("settings-button");
+        logoutButton.setOnAction(e -> {
+            controller.disconnect();
+            dialog.close();
+            // Redirection vers l'écran de connexion géré par le MainClient
+        });
+
+        accountSection.getChildren().addAll(accountHeader, logoutButton);
+
+        profileContent.getChildren().addAll(profileHeader, accountSection);
+        profileTab.setContent(profileContent);
+
+        // Onglet Contacts
+        Tab contactsTab = new Tab("Contacts");
+        contactsTab.setGraphic(createTabIcon(ICON_CONTACTS));
+
+        VBox contactsContent = new VBox(20);
+        contactsContent.getStyleClass().addAll("settings-tab", "contact-manager-section");
+
+        Label contactsHeader = new Label("Gestion des contacts");
+        contactsHeader.getStyleClass().add("settings-tab-header");
+
+        VBox contactsSection = new VBox(10);
+        contactsSection.getStyleClass().add("settings-section");
+
+        ListView<String> contactListView = new ListView<>(controller.getContacts());
+        contactListView.getStyleClass().add("contact-list-view");
+
+        HBox contactActions = new HBox(10);
+        contactActions.setAlignment(Pos.CENTER_RIGHT);
+
+        Button deleteContactButton = new Button("Supprimer");
+        deleteContactButton.setGraphic(createButtonIcon(ICON_TRASH));
+        deleteContactButton.getStyleClass().addAll("settings-button", "destructive-button");
+        deleteContactButton.setDisable(true);
+
+        contactListView.getSelectionModel().selectedItemProperty().addListener((obs, old, newValue) ->
+                deleteContactButton.setDisable(newValue == null));
+
+        deleteContactButton.setOnAction(e -> {
+            String selectedContact = contactListView.getSelectionModel().getSelectedItem();
+            if (selectedContact != null) {
+                showConfirmDeleteContact(selectedContact, contactListView);
+            }
+        });
+
+        contactActions.getChildren().add(deleteContactButton);
+        contactsSection.getChildren().addAll(contactListView, contactActions);
+
+        contactsContent.getChildren().addAll(contactsHeader, contactsSection);
+        contactsTab.setContent(contactsContent);
+
+        // Ajout des onglets
         tabPane.getTabs().addAll(profileTab, contactsTab);
 
-        // Ajouter les boutons au dialogue
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
         dialog.getDialogPane().setContent(tabPane);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
 
-        // Afficher le dialogue
-        dialog.showAndWait();
+        // Style du bouton Fermer
+        Button closeButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CLOSE);
+        closeButton.getStyleClass().addAll("settings-button", "cancel-button");
+
+        // Afficher le dialogue en utilisant Platform.runLater
+        Platform.runLater(() -> dialog.showAndWait());
+    }
+
+    /**
+     * Affiche une boîte de dialogue de confirmation pour supprimer un contact
+     */
+    private void showConfirmDeleteContact(String contactName, ListView<String> contactListView) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation");
+        alert.setHeaderText("Supprimer le contact");
+        alert.setContentText("Voulez-vous vraiment supprimer " + contactName + " de vos contacts ?");
+
+        // Style de l'alerte
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStyleClass().add("dialog-pane");
+
+        // Icône en haut à gauche
+        Label iconLabel = new Label(ICON_TRASH);
+        iconLabel.setFont(Font.font("FontAwesome", 24));
+        iconLabel.setTextFill(Color.WHITE);
+        dialogPane.setGraphic(iconLabel);
+
+        // Style des boutons
+        ((Button) dialogPane.lookupButton(ButtonType.OK)).getStyleClass().addAll("settings-button", "destructive-button");
+        ((Button) dialogPane.lookupButton(ButtonType.OK)).setText("Supprimer");
+        ((Button) dialogPane.lookupButton(ButtonType.CANCEL)).getStyleClass().addAll("settings-button", "cancel-button");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            // Récupérer l'ID du contact
+            User user = controller.getUserByUsername(contactName);
+            if (user != null) {
+                if (controller.deleteContact(user.getIdUser())) {
+                    // Rafraîchir la liste
+                    contactListView.setItems(controller.getContacts());
+
+                    showAlert(Alert.AlertType.INFORMATION, "Contact supprimé",
+                            "Le contact a été supprimé avec succès.");
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Erreur",
+                            "Une erreur est survenue lors de la suppression du contact.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Affiche le gestionnaire de fichiers
+     */
+
+
+    /**
+     * Affiche une alerte générique
+     */
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        // Ne pas définir de propriétaire pour éviter les erreurs
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+
+        // Style de l'alerte
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.getStyleClass().add("dialog-pane");
+
+        // Choisir l'icône en fonction du type d'alerte
+        Label iconLabel = new Label();
+        iconLabel.setFont(Font.font("FontAwesome", 24));
+        iconLabel.setTextFill(Color.WHITE);
+
+        if (type == Alert.AlertType.INFORMATION) {
+            iconLabel.setText("\uf05a"); // info icon
+        } else if (type == Alert.AlertType.WARNING) {
+            iconLabel.setText("\uf071"); // warning icon
+        } else if (type == Alert.AlertType.ERROR) {
+            iconLabel.setText("\uf057"); // error icon
+        }
+
+        dialogPane.setGraphic(iconLabel);
+
+        Platform.runLater(() -> alert.showAndWait());
+    }
+
+    /**
+     * Crée une icône pour un onglet
+     */
+    private Label createTabIcon(String iconCode) {
+        Label icon = new Label(iconCode);
+        icon.setFont(Font.font("FontAwesome", 14));
+        return icon;
+    }
+
+    /**
+     * Crée une icône pour un bouton
+     */
+    private Label createButtonIcon(String iconCode) {
+        Label icon = new Label(iconCode);
+        icon.setFont(Font.font("FontAwesome", 14));
+        icon.setPadding(new Insets(0, 5, 0, 0));
+        return icon;
     }
 }

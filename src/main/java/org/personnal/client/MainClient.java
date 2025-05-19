@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.personnal.client.DatabaseInitializer;
 import org.personnal.client.UI.ChatView;
 import org.personnal.client.UI.LoginView;
 import org.personnal.client.UI.RegisterView;
@@ -44,19 +45,33 @@ public class MainClient extends Application {
         // Icône de l'application (à implémenter si vous avez une icône)
         // primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/images/icon.png")));
 
+        // Afficher la vue de login par défaut
+        showLoginView();
 
         Scene scene = new Scene(root, PREF_WIDTH, PREF_HEIGHT);
 
         // Appliquer les CSS globaux
         URL globalCssUrl = getClass().getResource("/styles/global.css");
+        URL fontsCssUrl = getClass().getResource("/styles/fonts.css");
+        URL dialogsCssUrl = getClass().getResource("/styles/dialogs.css");
+
         if (globalCssUrl != null) {
             scene.getStylesheets().add(globalCssUrl.toExternalForm());
         } else {
             System.err.println("ATTENTION: Le fichier CSS global n'a pas pu être chargé");
         }
-        // Afficher la vue de login par défaut
-        showLoginView();
 
+        if (fontsCssUrl != null) {
+            scene.getStylesheets().add(fontsCssUrl.toExternalForm());
+        } else {
+            System.err.println("ATTENTION: Le fichier CSS des polices n'a pas pu être chargé");
+        }
+
+        if (dialogsCssUrl != null) {
+            scene.getStylesheets().add(dialogsCssUrl.toExternalForm());
+        } else {
+            System.err.println("ATTENTION: Le fichier CSS des dialogues n'a pas pu être chargé");
+        }
 
         primaryStage.setTitle("Alanya - Connexion");
         primaryStage.setScene(scene);
@@ -82,6 +97,8 @@ public class MainClient extends Application {
             // Ajouter les CSS appropriés
             URL globalCssUrl = getClass().getResource("/styles/global.css");
             URL authCssUrl = getClass().getResource("/styles/auth.css");
+            URL fontsCssUrl = getClass().getResource("/styles/fonts.css");
+            URL dialogsCssUrl = getClass().getResource("/styles/dialogs.css");
 
             if (globalCssUrl != null) {
                 currentScene.getStylesheets().add(globalCssUrl.toExternalForm());
@@ -89,6 +106,14 @@ public class MainClient extends Application {
 
             if (authCssUrl != null) {
                 currentScene.getStylesheets().add(authCssUrl.toExternalForm());
+            }
+
+            if (fontsCssUrl != null) {
+                currentScene.getStylesheets().add(fontsCssUrl.toExternalForm());
+            }
+
+            if (dialogsCssUrl != null) {
+                currentScene.getStylesheets().add(dialogsCssUrl.toExternalForm());
             }
         }
     }

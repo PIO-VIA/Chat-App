@@ -48,7 +48,7 @@ public class ChatView {
     public ChatView(ChatController controller) {
         this.controller = controller;
         this.controller.setCurrentChatPartner(null);
-        this.dialogManager = new DialogManager(controller, this);
+        this.dialogManager = new DialogManager(controller, new Stage());
 
         // Initialiser les composants principaux
         mainView = new BorderPane();
