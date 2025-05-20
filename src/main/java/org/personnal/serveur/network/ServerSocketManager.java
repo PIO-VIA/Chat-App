@@ -83,9 +83,11 @@ public class ServerSocketManager {
         // Arrêter le gestionnaire de sessions
         SessionManager.shutdown();
 
+        // Arrêter le gestionnaire d'appels
+        CallManager.shutdown();
+
         System.out.println("🛑 Serveur arrêté et ressources libérées.");
     }
-
     /**
      * Ajoute un hook d'arrêt pour fermer proprement le serveur
      */

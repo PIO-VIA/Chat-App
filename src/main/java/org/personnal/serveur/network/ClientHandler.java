@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -110,6 +111,8 @@ public class ClientHandler implements Runnable {
                 return handleCheckUser(request.getPayload());
             case CHECK_ONLINE:
                 return handleCheckOnline(request.getPayload());
+            case CALL:
+                return handleCall(request.getPayload());
             case PING:
                 return handlePing(request.getPayload());
             case TYPING:
@@ -335,6 +338,146 @@ public class ClientHandler implements Runnable {
             this.receiver = receiver;
             this.isTyping = isTyping;
             this.timestamp = timestamp;
+        }
+    }
+    private PeerResponse handleCall(Map<String, String> payload) {
+        String caller = payload.get("caller");
+        String callee = payload.get("callee");
+        String action = payload.get("action"); // "initiate", "accept", "reject", "hangup", "ice-candidate", "offer", "answer", "audio-data"
+        String data = payload.get("data"); // Pour SDP, ICE candidates ou données audio
+
+        // Vérifier les paramètres obligatoires
+        if (caller == null || callee == null || action == null) {
+            return new PeerResponse(false, "❌ Données d'appel incomplètes");
+        }
+
+        System.out.println("Requête d'appel: " + action + " de " + caller + " vers " + callee);
+
+        switch (action) {
+            case "initiate":
+                // Vérifier que l'appelé existe et est en ligne
+                if (!userService.userExists(callee)) {
+                    return new PeerResponse(false, "❌ L'utilisateur " + callee + " n'existe pas");
+                }
+
+                boolean isOnline = SessionManager.isUserOnline(callee);
+                if (!isOnline) {
+                    return new PeerResponse(false, "❌ L'utilisateur " + callee + " n'est pas en ligne");
+                }
+
+                // Notifier l'appelé
+                ClientHandler calleeHandler = SessionManager.getUserHandler(callee);
+                if (calleeHandler != null) {
+                    try {
+                        Map<String, String> callPayload = new HashMap<>();
+                        callPayload.put("caller", caller);
+                        callPayload.put("action", "incoming-call");
+
+                        calleeHandler.sendJsonResponse(
+                                new PeerResponse(true, "📞 Appel entrant", callPayload)
+                        );
+                        return new PeerResponse(true, "✅ Appel initié", Map.of("status", "ringing"));
+                    } catch (IOException e) {
+                        return new PeerResponse(false, "❌ Erreur lors de l'initiation de l'appel: " + e.getMessage());
+                    }
+                } else {
+                    return new PeerResponse(false, "❌ L'utilisateur " + callee + " n'est pas connecté");
+                }
+
+            case "accept":
+                // L'utilisateur accepte l'appel
+                ClientHandler callerHandler = SessionManager.getUserHandler(caller);
+                if (callerHandler != null) {
+                    try {
+                        Map<String, String> callPayload = new HashMap<>();
+                        callPayload.put("callee", callee);
+                        callPayload.put("action", "call-accepted");
+
+                        callerHandler.sendJsonResponse(
+                                new PeerResponse(true, "✅ Appel accepté", callPayload)
+                        );
+                        return new PeerResponse(true, "✅ Vous avez accepté l'appel",
+                                Map.of("status", "connected"));
+                    } catch (IOException e) {
+                        return new PeerResponse(false, "❌ Erreur lors de l'acceptation de l'appel: " + e.getMessage());
+                    }
+                } else {
+                    return new PeerResponse(false, "❌ L'appelant n'est plus connecté");
+                }
+
+            case "reject":
+                // L'utilisateur rejette l'appel
+                callerHandler = SessionManager.getUserHandler(caller);
+                if (callerHandler != null) {
+                    try {
+                        Map<String, String> callPayload = new HashMap<>();
+                        callPayload.put("callee", callee);
+                        callPayload.put("action", "call-rejected");
+
+                        callerHandler.sendJsonResponse(
+                                new PeerResponse(true, "📞 Appel rejeté", callPayload)
+                        );
+                        return new PeerResponse(true, "✅ Vous avez rejeté l'appel");
+                    } catch (IOException e) {
+                        return new PeerResponse(false, "❌ Erreur lors du rejet de l'appel: " + e.getMessage());
+                    }
+                } else {
+                    return new PeerResponse(false, "❌ L'appelant n'est plus connecté");
+                }
+
+            case "hangup":
+                // Fin de l'appel
+                String otherUser = caller.equals(this.username) ? callee : caller;
+                ClientHandler otherHandler = SessionManager.getUserHandler(otherUser);
+                if (otherHandler != null) {
+                    try {
+                        Map<String, String> callPayload = new HashMap<>();
+                        callPayload.put("user", this.username);
+                        callPayload.put("action", "call-ended");
+
+                        otherHandler.sendJsonResponse(
+                                new PeerResponse(true, "📞 Appel terminé", callPayload)
+                        );
+                    } catch (IOException e) {
+                        // Log l'erreur mais continuer
+                        System.err.println("❌ Erreur lors de la notification de fin d'appel: " + e.getMessage());
+                    }
+                }
+                return new PeerResponse(true, "✅ Appel terminé");
+
+            case "offer":
+            case "answer":
+            case "ice-candidate":
+            case "audio-data":
+                // Transmettre les messages de signalisation WebRTC ou les données audio
+                if (data != null) {
+                    ClientHandler targetHandler = action.equals("offer") ?
+                            SessionManager.getUserHandler(callee) :
+                            SessionManager.getUserHandler(caller);
+
+                    if (targetHandler != null) {
+                        try {
+                            Map<String, String> signalingPayload = new HashMap<>();
+                            signalingPayload.put("from", this.username);
+                            signalingPayload.put("action", action);
+                            signalingPayload.put("data", data);
+
+                            targetHandler.sendJsonResponse(
+                                    new PeerResponse(true, "📞 Signal d'appel", signalingPayload)
+                            );
+                            return new PeerResponse(true, "✅ Signal transmis");
+                        } catch (IOException e) {
+                            return new PeerResponse(false, "❌ Erreur lors de la transmission du signal: " + e.getMessage());
+                        }
+                    } else {
+                        return new PeerResponse(false, "❌ Destinataire non connecté");
+                    }
+                } else {
+                    return new PeerResponse(false, "❌ Données de signalisation manquantes");
+                }
+
+            default:
+                return new PeerResponse(false, "❌ Action d'appel non reconnue: " + action);
         }
     }
 }
