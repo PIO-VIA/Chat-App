@@ -249,12 +249,36 @@ public class ChatView {
      */
     private void initiateCall() {
         if (currentChatPartner != null && audioCallManager != null) {
-            audioCallManager.initiateCall(currentChatPartner);
-
-            // Afficher la fenêtre d'appel
-            CallWindow callWindow = new CallWindow(audioCallManager, controller, false, currentChatPartner);
-            callWindow.show();
+            if (audioCallManager.initiateCall(currentChatPartner)) {
+                // Afficher la fenêtre d'appel améliorée
+                CallWindow callWindow = new CallWindow(audioCallManager, controller, false, currentChatPartner);
+                callWindow.show();
+            } else {
+                // Afficher une notification d'erreur si l'initiation a échoué
+                showNotification("Impossible d'initier l'appel, veuillez réessayer.");
+            }
         }
+    }
+
+    // Méthode d'assistance pour afficher des notifications
+    private void showNotification(String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Notification");
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.show();
+
+            // Fermer automatiquement après 3 secondes
+            new Thread(() -> {
+                try {
+                    Thread.sleep(3000);
+                    Platform.runLater(alert::close);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        });
     }
 
     /**
@@ -273,12 +297,43 @@ public class ChatView {
         if ("incoming-call".equals(eventData.get("action"))) {
             String caller = eventData.get("caller");
             Platform.runLater(() -> {
+                // Utiliser la fenêtre d'appel améliorée
                 CallWindow callWindow = new CallWindow(audioCallManager, controller, true, caller);
                 callWindow.show();
+
+                // Afficher également une notification d'appel
+                showIncomingCallNotification(caller);
             });
         }
     }
 
+    // Méthode d'assistance pour afficher une notification d'appel entrant
+    private void showIncomingCallNotification(String caller) {
+        try {
+            // Créer une notification spéciale pour les appels entrants
+            Alert notification = new Alert(Alert.AlertType.INFORMATION);
+            notification.setTitle("Appel entrant");
+            notification.setHeaderText("Appel de " + caller);
+            notification.setContentText("Vous avez un appel audio entrant.");
+
+            // Jouer un son de sonnerie (si disponible)
+            // mediaPlayer.play();
+
+            // Fermer après 5 secondes si l'utilisateur n'a pas répondu
+            new Thread(() -> {
+                try {
+                    Thread.sleep(5000);
+                    Platform.runLater(notification::close);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+
+            notification.show();
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'affichage de la notification d'appel : " + e.getMessage());
+        }
+    }
     /**
      * Ajoute un nouveau contact à la liste
      * @param contact Nom du contact à ajouter
@@ -319,4 +374,5 @@ public class ChatView {
     public void updateContactStatus(String contact, boolean online) {
         Platform.runLater(() -> contactsPanel.refreshContactList());
     }
+
 }

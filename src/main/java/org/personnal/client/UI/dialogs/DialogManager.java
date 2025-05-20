@@ -12,8 +12,11 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.personnal.client.controller.ChatController;
 import org.personnal.client.model.User;
+import org.personnal.client.UI.call.AudioPreferencesWindow;
 
 import java.util.Optional;
+
+import static java.awt.SystemColor.menu;
 
 /**
  * Classe pour gérer tous les dialogues de l'application avec styles améliorés
@@ -294,9 +297,10 @@ public class DialogManager {
         }
     }
 
-    /**
-     * Affiche le gestionnaire de fichiers
-     */
+    public void showAudioPreferencesDialog() {
+        AudioPreferencesWindow preferencesWindow = new AudioPreferencesWindow();
+        preferencesWindow.show();
+    }
 
 
     /**

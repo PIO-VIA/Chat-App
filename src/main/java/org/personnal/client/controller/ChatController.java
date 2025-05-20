@@ -698,6 +698,15 @@ public class ChatController {
             } catch (Exception e) {
                 // Ignorer les erreurs lors de la déconnexion
             }
+            // Fermer proprement les appels audio en cours
+            if (audioCallManager != null) {
+                // S'assurer qu'aucun appel n'est en cours
+                if (audioCallManager.getCallStatus() != AudioCallManager.CallStatus.IDLE) {
+                    audioCallManager.endCall();
+                }
+            }
+
+            fileTransferExecutor.shutdownNow();
 
             // Fermer la connexion
             socketManager.closeConnection();

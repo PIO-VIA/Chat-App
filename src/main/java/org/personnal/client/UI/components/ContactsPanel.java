@@ -345,7 +345,18 @@ public class ContactsPanel {
             });
         }
     }
-
+    /**
+     * Mettre à jour l'indicateur d'appel pour un contact
+     * @param contactUsername le nom d'utilisateur du contact
+     * @param inCall true si un appel est en cours avec ce contact
+     */
+    public void updateCallIndicator(String contactUsername, boolean inCall) {
+        // Trouver l'élément de liste correspondant au contact
+        Platform.runLater(() -> {
+            // Parcourir les cellules visibles et mettre à jour l'indicateur
+            // pour le contact spécifié
+        });
+    }
     /**
      * Rafraîchit la liste des contacts
      */
@@ -359,4 +370,5 @@ public class ContactsPanel {
     public BorderPane getPanel() {
         return panel;
     }
+
 }
