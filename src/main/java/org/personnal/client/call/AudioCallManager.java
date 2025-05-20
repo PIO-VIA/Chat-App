@@ -49,13 +49,11 @@ public class AudioCallManager {
         CALLING
     }
 
+    // Remplacer dans le constructeur
     public AudioCallManager(ChatController chatController) throws IOException {
         this.chatController = chatController;
-        // Créer un socket dédié pour les appels
-        this.callSocket = new CallSocketManager("localhost", 5000, chatController.getCurrentUsername());
-        this.callSocket.setResponseListener(this::handleCallEvent);
+        this.socketManager = ClientSocketManager.getInstance();
         this.webRTCManager = new WebRTCManager(this::handleWebRTCSignal);
-
     }
 
 
@@ -118,24 +116,16 @@ public class AudioCallManager {
             payload.put("action", "accept");
 
             PeerRequest request = new PeerRequest(RequestType.CALL, payload);
-            CompletableFuture.runAsync(() -> {
-                try {
-                    socketManager.sendRequest(request);
-                    PeerResponse response = socketManager.readResponse();
 
-                    if (response.isSuccess()) {
-                        callStatus = CallStatus.CONNECTED;
+            // Mettre à jour l'état avant d'envoyer
+            callStatus = CallStatus.CONNECTED;
 
-                        // Initialiser WebRTC et attendre l'offre
-                        webRTCManager.initializeConnection();
-                    } else {
-                        endCall();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    endCall();
-                }
-            });
+            // Initialiser WebRTC
+            webRTCManager.initializeConnection();
+
+            // Envoyer la requête sans attendre de réponse
+            socketManager.sendRequest(request);
+
         } catch (Exception e) {
             e.printStackTrace();
             endCall();
@@ -264,14 +254,10 @@ public class AudioCallManager {
             payload.put("data", data);
 
             PeerRequest request = new PeerRequest(RequestType.CALL, payload);
-            CompletableFuture.runAsync(() -> {
-                try {
-                    socketManager.sendRequest(request);
-                    socketManager.readResponse();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
+
+            // Envoyer la requête sans attendre de réponse
+            socketManager.sendRequest(request);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -37,7 +37,7 @@ public class ClientSocketManager {
     private int serverPort = 5000;
 
     // Temps de timeout réduit
-    private static final int SOCKET_TIMEOUT = 10000; // 10 secondes
+    private static final int SOCKET_TIMEOUT = 30000; // 10 secondes
 
     // Constructeur privé pour singleton
     private ClientSocketManager() {
