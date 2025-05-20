@@ -234,3 +234,23 @@
     -fx-padding: 3px 8px;
     -fx-background-radius: 3px;
 }
+.call-button {
+    -fx-background-color: #28a745;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-background-radius: 50%;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-max-width: 40px;
+    -fx-max-height: 40px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.call-button:hover {
+    -fx-background-color: #218838;
+}
+
+.call-button:pressed {
+    -fx-background-color: #1e7e34;
+}

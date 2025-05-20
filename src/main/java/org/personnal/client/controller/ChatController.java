@@ -6,6 +6,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
 import javafx.stage.FileChooser;
 import org.personnal.client.MainClient;
+import org.personnal.client.call.AudioCallManager;
 import org.personnal.client.database.DAO.*;
 import org.personnal.client.model.FileData;
 import org.personnal.client.model.Message;
@@ -60,6 +61,8 @@ public class ChatController {
 
     // Drapeau pour éviter les mises à jour UI trop fréquentes
     private volatile boolean refreshingContactList = false;
+    // Ajouter un attribut pour le gestionnaire d'appels
+    private AudioCallManager audioCallManager;
 
     public ChatController(MainClient app, String currentUsername) throws IOException {
         this.app = app;
@@ -71,6 +74,9 @@ public class ChatController {
         this.messageDAO = new MessageDAO();
         this.fileDAO = new FileDAO();
 
+        // Initialiser le gestionnaire d'appels
+        this.audioCallManager = new AudioCallManager(this);
+
         // Créer le répertoire pour les fichiers reçus s'il n'existe pas
         this.filesDirectory = "files/" + currentUsername;
         createFilesDirectory();
@@ -80,6 +86,11 @@ public class ChatController {
 
         // Charger les contacts depuis la BD locale au démarrage
         loadContactsFromDatabase();
+    }
+
+    // Getter pour le gestionnaire d'appels
+    public AudioCallManager getAudioCallManager() {
+        return audioCallManager;
     }
 
     /**

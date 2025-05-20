@@ -1,6 +1,9 @@
 package org.personnal.client.UI.components;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -59,15 +62,18 @@ public class MessagesPanel {
 
     // Ensemble des cellules actuellement visibles pour optimiser les mises à jour
     private final Set<ListCell<Message>> visibleCells = new HashSet<>();
-
+    private final StringProperty currentChatPartnerProperty = new SimpleStringProperty(null);
+    private final Runnable onCallButtonClicked;
     /**
      * Constructeur du panneau de messages
      */
-    public MessagesPanel(ChatController controller, ObservableList<Message> messages, Runnable onSendMessage) {
+    public MessagesPanel(ChatController controller, ObservableList<Message> messages,
+                         Runnable onSendMessage, Runnable onCallButtonClicked) {
         this.panel = new BorderPane();
         this.controller = controller;
         this.messages = messages;
         this.onSendMessage = onSendMessage;
+        this.onCallButtonClicked = onCallButtonClicked;
 
         // Appliquer le style global au panneau
         panel.getStyleClass().add("messages-panel");
@@ -119,7 +125,19 @@ public class MessagesPanel {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        chatHeader.getChildren().addAll(headerContent, spacer);
+        // Bouton d'appel
+        Button callButton = new Button("📞");
+        callButton.getStyleClass().add("call-button");
+        callButton.setTooltip(new Tooltip("Appeler ce contact"));
+        callButton.setOnAction(e -> {
+            if (currentChatPartner != null) {
+                onCallButtonClicked.run();
+            }
+        });
+        // Désactiver le bouton si aucun contact n'est sélectionné
+        callButton.disableProperty().bind(Bindings.isNull(currentChatPartnerProperty));
+
+        chatHeader.getChildren().addAll(headerContent, spacer, callButton);
 
         return chatHeader;
     }
@@ -311,11 +329,13 @@ public class MessagesPanel {
         }
     }
 
+
     /**
      * Définit le partenaire de chat actuel
      */
     public void setCurrentChatPartner(String partner) {
         this.currentChatPartner = partner;
+        this.currentChatPartnerProperty.set(partner);
 
         // Activer l'input si un contact est sélectionné
         messageField.setDisable(partner == null);

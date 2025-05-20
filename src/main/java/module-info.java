@@ -3,6 +3,7 @@ module org.personnal.client {
     requires javafx.fxml;
     requires com.google.gson;
     requires java.sql;
+    requires java.desktop;
 
     opens org.personnal.client to javafx.fxml;
     exports org.personnal.client;

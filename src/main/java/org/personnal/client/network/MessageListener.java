@@ -75,11 +75,34 @@ public class MessageListener extends Thread {
     /**
      * Traite la réponse JSON
      */
+    // Ajout dans la méthode processResponse() de MessageListener.java
+
     private void processResponse(String responseJson) {
         try {
             PeerResponse response = gson.fromJson(responseJson, PeerResponse.class);
 
-            // Traiter selon le type de message
+            // Traiter les événements d'appel
+            if (response.getData() instanceof Map) {
+                Map<String, String> dataMap = (Map<String, String>) response.getData();
+                if (dataMap.containsKey("action")) {
+                    String action = dataMap.get("action");
+                    if (action.equals("incoming-call") || action.equals("call-accepted") ||
+                            action.equals("call-rejected") || action.equals("call-ended") ||
+                            action.equals("offer") || action.equals("answer") ||
+                            action.equals("ice-candidate")) {
+
+                        // Déléguer au chatView pour traitement de l'appel
+                        Platform.runLater(() -> {
+                            if (chatView != null) {
+                                chatView.handleCallEvent(dataMap);
+                            }
+                        });
+                        return;
+                    }
+                }
+            }
+
+            // Traiter les autres types de messages comme avant
             if (response.getMessage() != null && response.getMessage().contains("message reçu")) {
                 handleNewMessage(response);
             } else if (response.getMessage() != null && response.getMessage().contains("fichier")) {
@@ -95,7 +118,6 @@ public class MessageListener extends Thread {
             System.err.println("Erreur lors du traitement de la réponse: " + e.getMessage());
         }
     }
-
     /**
      * Traite un nouveau message reçu
      */

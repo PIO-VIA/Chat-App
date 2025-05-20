@@ -6,6 +6,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import org.personnal.client.UI.call.CallWindow;
+import org.personnal.client.call.AudioCallManager;
 import org.personnal.client.controller.ChatController;
 import org.personnal.client.model.FileData;
 import org.personnal.client.model.Message;
@@ -13,6 +15,9 @@ import org.personnal.client.model.User;
 import org.personnal.client.UI.components.ContactsPanel;
 import org.personnal.client.UI.components.MessagesPanel;
 import org.personnal.client.UI.dialogs.DialogManager;
+
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * Vue principale de l'application de chat
@@ -41,6 +46,7 @@ public class ChatView {
     private static final double LEFT_PANEL_WIDTH = 300;
     private static final double RIGHT_PANEL_MIN_WIDTH = 400;
 
+    private AudioCallManager audioCallManager;
     /**
      * Constructeur de la vue de chat
      * @param controller Contrôleur de chat
@@ -49,6 +55,12 @@ public class ChatView {
         this.controller = controller;
         this.controller.setCurrentChatPartner(null);
         this.dialogManager = new DialogManager(controller, new Stage());
+        // Initialiser le gestionnaire d'appels
+        try {
+            this.audioCallManager = new AudioCallManager(controller);
+        } catch (IOException e) {
+            System.err.println("Erreur lors de l'initialisation du gestionnaire d'appels: " + e.getMessage());
+        }
 
         // Initialiser les composants principaux
         mainView = new BorderPane();
@@ -62,7 +74,7 @@ public class ChatView {
                 this.dialogManager::showAddContactDialog,
                 this.dialogManager::showSettingsDialog);
 
-        messagesPanel = new MessagesPanel(controller, messages, this::sendMessage);
+        messagesPanel = new MessagesPanel(controller, messages, this::sendMessage, this::initiateCall);
 
         setupSplitPane();
 
@@ -229,6 +241,42 @@ public class ChatView {
             contacts.addAll(controller.getContacts());
             contactsPanel.refreshContactList();
         });
+    }
+
+
+    /**
+     * Initie un appel vers le contact actuellement sélectionné
+     */
+    private void initiateCall() {
+        if (currentChatPartner != null && audioCallManager != null) {
+            audioCallManager.initiateCall(currentChatPartner);
+
+            // Afficher la fenêtre d'appel
+            CallWindow callWindow = new CallWindow(audioCallManager, controller, false, currentChatPartner);
+            callWindow.show();
+        }
+    }
+
+    /**
+     * Gère les événements d'appel reçus du serveur
+     * @param eventData Les données de l'événement d'appel
+     */
+    public void handleCallEvent(Map<String, String> eventData) {
+        if (audioCallManager == null) {
+            return;
+        }
+
+        // Déléguer au gestionnaire d'appels
+        audioCallManager.handleCallEvent(eventData);
+
+        // Afficher l'interface d'appel si c'est un appel entrant
+        if ("incoming-call".equals(eventData.get("action"))) {
+            String caller = eventData.get("caller");
+            Platform.runLater(() -> {
+                CallWindow callWindow = new CallWindow(audioCallManager, controller, true, caller);
+                callWindow.show();
+            });
+        }
     }
 
     /**
