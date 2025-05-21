@@ -15,8 +15,12 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ClientHandler implements Runnable {
 
@@ -255,6 +259,24 @@ public class ClientHandler implements Runnable {
      * @param payload les données de la requête contenant le nom d'utilisateur à vérifier
      * @return une réponse indiquant si l'utilisateur existe ou non
      */
+    // Ajouter en haut de la classe ClientHandler
+    private static final Map<String, CachedUserCheck> userExistsCache = new ConcurrentHashMap<>();
+    private static final long USER_CACHE_DURATION_MS = 3600000; // 1 heure
+
+    private static class CachedUserCheck {
+        private final boolean exists;
+        private final long timestamp;
+
+        public CachedUserCheck(boolean exists) {
+            this.exists = exists;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > USER_CACHE_DURATION_MS;
+        }
+    }
+
     private PeerResponse handleCheckUser(Map<String, String> payload) {
         String usernameToCheck = payload.get("username");
 
@@ -262,13 +284,22 @@ public class ClientHandler implements Runnable {
             return new PeerResponse(false, "❌ Nom d'utilisateur non spécifié");
         }
 
+        // Vérifier dans le cache d'abord
+        CachedUserCheck cachedCheck = userExistsCache.get(usernameToCheck);
+        if (cachedCheck != null && !cachedCheck.isExpired()) {
+            return new PeerResponse(cachedCheck.exists, null,
+                    Map.of("exists", String.valueOf(cachedCheck.exists)));
+        }
+
+        // Si pas dans le cache ou expiré, vérifier dans la base de données
         boolean userExists = userService.userExists(usernameToCheck);
 
-        if (userExists) {
-            return new PeerResponse(true, "✅ L'utilisateur " + usernameToCheck + " existe", Map.of("exists", "true"));
-        } else {
-            return new PeerResponse(false, "❌ L'utilisateur " + usernameToCheck + " n'existe pas", Map.of("exists", "false"));
-        }
+        // Mettre en cache
+        userExistsCache.put(usernameToCheck, new CachedUserCheck(userExists));
+
+        // Réponse optimisée sans message texte superflu
+        return new PeerResponse(userExists, null,
+                Map.of("exists", String.valueOf(userExists)));
     }
 
     /**
@@ -277,10 +308,36 @@ public class ClientHandler implements Runnable {
      * @return une réponse indiquant si l'utilisateur est connecté ou non
      */
     private PeerResponse handleCheckOnline(Map<String, String> payload) {
+        // Support des requêtes par lot
+        String batchStr = payload.get("batch");
+        boolean isBatch = "true".equals(batchStr);
+
+        if (isBatch) {
+            String usernamesStr = payload.get("usernames");
+            if (usernamesStr == null || usernamesStr.trim().isEmpty()) {
+                return new PeerResponse(false, "Usernames manquants", null);
+            }
+
+            String[] usernames = usernamesStr.split(",");
+            Map<String, String> results = new HashMap<>();
+
+            for (String username : usernames) {
+                username = username.trim();
+                if (!username.isEmpty()) {
+                    boolean isOnline = SessionManager.isUserOnline(username);
+                    results.put(username, String.valueOf(isOnline));
+                }
+            }
+
+            return new PeerResponse(true, null, results);
+        }
+
+        // Vérification individuelle (cas standard)
         String usernameToCheck = payload.get("username");
 
         if ("ping_test".equals(usernameToCheck)) {
-            return new PeerResponse(true, "ping_response", Map.of("timestamp", String.valueOf(System.currentTimeMillis())));
+            return new PeerResponse(true, "ping_response",
+                    Map.of("timestamp", String.valueOf(System.currentTimeMillis())));
         }
 
         if (usernameToCheck == null || usernameToCheck.trim().isEmpty()) {
@@ -289,11 +346,9 @@ public class ClientHandler implements Runnable {
 
         boolean isOnline = SessionManager.isUserOnline(usernameToCheck);
 
-        if (isOnline) {
-            return new PeerResponse(true, "✅ L'utilisateur " + usernameToCheck + " est en ligne", Map.of("online", "true"));
-        } else {
-            return new PeerResponse(false, "❌ L'utilisateur " + usernameToCheck + " n'est pas en ligne", Map.of("online", "false"));
-        }
+        // Réponse optimisée sans message texte superflu
+        return new PeerResponse(isOnline, null,
+                Map.of("online", String.valueOf(isOnline)));
     }
 
     // Méthode utilitaire pour envoyer un message texte d'un autre handler.
@@ -478,6 +533,47 @@ public class ClientHandler implements Runnable {
 
             default:
                 return new PeerResponse(false, "❌ Action d'appel non reconnue: " + action);
+        }
+    }
+    // Ajouter en tant que membres statiques de la classe ClientHandler
+    private static final ScheduledExecutorService cacheCleanupScheduler =
+            Executors.newSingleThreadScheduledExecutor();
+
+    static {
+        // Nettoyer le cache toutes les heures
+        cacheCleanupScheduler.scheduleAtFixedRate(() -> {
+            try {
+                long now = System.currentTimeMillis();
+                int sizeBefore = userExistsCache.size();
+
+                // Nettoyer le cache userExistsCache
+                Iterator<Map.Entry<String, CachedUserCheck>> iterator =
+                        userExistsCache.entrySet().iterator();
+
+                while (iterator.hasNext()) {
+                    Map.Entry<String, CachedUserCheck> entry = iterator.next();
+                    if (entry.getValue().isExpired()) {
+                        iterator.remove();
+                    }
+                }
+
+                System.out.println("Nettoyage du cache utilisateurs: " +
+                        sizeBefore + " -> " + userExistsCache.size());
+            } catch (Exception e) {
+                System.err.println("Erreur lors du nettoyage du cache: " + e.getMessage());
+            }
+        }, 1, 1, TimeUnit.HOURS);
+    }
+
+    // Ajouter aussi cette méthode statique
+    public static void shutdownCache() {
+        cacheCleanupScheduler.shutdown();
+        try {
+            if (!cacheCleanupScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                cacheCleanupScheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            cacheCleanupScheduler.shutdownNow();
         }
     }
 }

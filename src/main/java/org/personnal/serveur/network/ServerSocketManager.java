@@ -85,6 +85,8 @@ public class ServerSocketManager {
 
         // Arrêter le gestionnaire d'appels
         CallManager.shutdown();
+        // Arrêter le cache des utilisateurs
+        ClientHandler.shutdownCache();
 
         System.out.println("🛑 Serveur arrêté et ressources libérées.");
     }
