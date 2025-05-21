@@ -11,7 +11,9 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -121,16 +123,16 @@ public class ClientSocketManager {
      * Vérifie si un utilisateur est en ligne (avec cache)
      * Cette méthode est désormais manuelle et n'est plus appelée automatiquement
      */
+    // Amélioration de la méthode isUserOnline
     public boolean isUserOnline(String username) {
-        // Vérifier le cache d'abord
+        // Vérifier le cache d'abord avec une durée d'expiration plus courte (5 secondes)
         CachedStatus cachedStatus = onlineStatusCache.get(username);
         if (cachedStatus != null && !cachedStatus.isExpired()) {
             return cachedStatus.isOnline();
         }
 
-        // Si pas dans le cache ou expiré, faire la requête réseau
+        // Si pas connecté, retourner false immédiatement
         if (!isConnected.get()) {
-            // En cas de déconnexion, retourner false
             return false;
         }
 
@@ -138,24 +140,122 @@ public class ClientSocketManager {
             Map<String, String> payload = new HashMap<>();
             payload.put("username", username);
 
-            PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, payload);
-            sendRequest(request);
-            PeerResponse response = readResponse();
+            // Ajouter une propriété avec timestamp pour éviter le cache côté serveur
+            payload.put("timestamp", String.valueOf(System.currentTimeMillis()));
 
-            boolean isOnline = false;
-            if (response.isSuccess()) {
-                Map<String, String> data = (Map<String, String>) response.getData();
-                isOnline = "true".equals(data.get("online"));
+            synchronized (sendLock) {
+                PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, payload);
+                sendRequest(request);
+
+                // Réduire le timeout pour cette requête spécifique
+                socket.setSoTimeout(2000); // 2 secondes
+
+                PeerResponse response = readResponse();
+
+                // Restaurer le timeout normal
+                socket.setSoTimeout(SOCKET_TIMEOUT);
+
+                boolean isOnline = false;
+                if (response.isSuccess()) {
+                    Map<String, String> data = (Map<String, String>) response.getData();
+                    isOnline = "true".equals(data.get("online"));
+                }
+
+                // Mettre en cache pour 5 secondes seulement
+                onlineStatusCache.put(username, new CachedStatus(isOnline, System.currentTimeMillis() + 5000));
+                return isOnline;
             }
-
-            // Mettre en cache le résultat (valide pour 30 secondes)
-            onlineStatusCache.put(username, new CachedStatus(isOnline, System.currentTimeMillis() + 30000));
-
-            return isOnline;
+        } catch (SocketTimeoutException e) {
+            // En cas de timeout, mettre en cache "offline" pour un court moment
+            onlineStatusCache.put(username, new CachedStatus(false, System.currentTimeMillis() + 3000));
+            System.err.println("Timeout lors de la vérification du statut de " + username);
+            return false;
         } catch (IOException e) {
-            // En cas d'erreur, utiliser la dernière valeur connue ou supposer hors ligne
-            return cachedStatus != null ? cachedStatus.isOnline() : false;
+            // En cas d'erreur, utiliser la dernière valeur connue si disponible
+            if (cachedStatus != null) {
+                return cachedStatus.isOnline();
+            }
+            return false;
+        } finally {
+            try {
+                // Restaurer le timeout normal
+                socket.setSoTimeout(SOCKET_TIMEOUT);
+            } catch (Exception ignored) {}
         }
+    }
+
+    // Nouvelle méthode optimisée pour vérifier plusieurs utilisateurs en même temps
+    public Map<String, Boolean> batchCheckOnlineStatus(List<String> usernames) {
+        Map<String, Boolean> results = new HashMap<>();
+        if (usernames.isEmpty() || !isConnected.get()) {
+            return results;
+        }
+
+        // D'abord, recueillir tous les résultats en cache qui sont valides
+        List<String> usersToCheck = new ArrayList<>();
+        for (String username : usernames) {
+            CachedStatus status = onlineStatusCache.get(username);
+            if (status != null && !status.isExpired()) {
+                results.put(username, status.isOnline());
+            } else {
+                usersToCheck.add(username);
+            }
+        }
+
+        if (usersToCheck.isEmpty()) {
+            return results;
+        }
+
+        // Créer une requête par lot pour tous les utilisateurs restants
+        Map<String, String> payload = new HashMap<>();
+        payload.put("usernames", String.join(",", usersToCheck));
+        payload.put("batch", "true");
+        payload.put("timestamp", String.valueOf(System.currentTimeMillis()));
+
+        try {
+            synchronized (sendLock) {
+                PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, payload);
+                sendRequest(request);
+
+                // Réduire le timeout mais donner plus de temps pour une requête par lot
+                socket.setSoTimeout(5000); // 5 secondes
+
+                PeerResponse response = readResponse();
+
+                if (response.isSuccess() && response.getData() instanceof Map) {
+                    Map<String, Object> data = (Map<String, Object>) response.getData();
+
+                    for (String username : usersToCheck) {
+                        boolean online = false;
+                        if (data.containsKey(username)) {
+                            online = Boolean.parseBoolean(data.get(username).toString());
+                        }
+
+                        results.put(username, online);
+                        onlineStatusCache.put(username, new CachedStatus(online, System.currentTimeMillis() + 5000));
+                    }
+                } else {
+                    // Échec de la requête par lot, marquer tous comme hors ligne
+                    for (String username : usersToCheck) {
+                        results.put(username, false);
+                        onlineStatusCache.put(username, new CachedStatus(false, System.currentTimeMillis() + 3000));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // En cas d'erreur, marquer tous comme hors ligne
+            for (String username : usersToCheck) {
+                results.put(username, false);
+            }
+            System.err.println("Erreur lors de la vérification par lot: " + e.getMessage());
+        } finally {
+            try {
+                // Restaurer le timeout normal
+                socket.setSoTimeout(SOCKET_TIMEOUT);
+            } catch (Exception ignored) {}
+        }
+
+        return results;
     }
 
     /**

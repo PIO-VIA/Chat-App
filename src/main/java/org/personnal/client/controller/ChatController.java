@@ -25,10 +25,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class ChatController {
@@ -456,22 +453,56 @@ public class ChatController {
      * @param username Le nom d'utilisateur à vérifier
      * @return true si l'utilisateur existe, false sinon
      */
+    // Ajouter un cache pour les vérifications d'utilisateurs
+    private final Map<String, Boolean> userExistsCache = new ConcurrentHashMap<>();
+    private final long USER_CACHE_DURATION = 3600000; // 1 heure en millisecondes
+    private final Map<String, Long> userCacheTimestamps = new ConcurrentHashMap<>();
+
     public boolean checkUserExists(String username) {
         if (username == null || username.isEmpty() || username.equals(currentUsername)) {
             return false;
         }
 
+        // Vérifier le cache d'abord
+        if (userExistsCache.containsKey(username)) {
+            Long timestamp = userCacheTimestamps.get(username);
+            if (timestamp != null && System.currentTimeMillis() - timestamp < USER_CACHE_DURATION) {
+                return userExistsCache.get(username);
+            }
+        }
+
+        // Définir un timeout court pour cette requête
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        // Exécuter la vérification en arrière-plan
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, String> payload = new HashMap<>();
+                payload.put("username", username);
+
+                PeerRequest request = new PeerRequest(RequestType.CHECK_USER, payload);
+                socketManager.sendRequest(request);
+
+                // Utiliser un timeout plus court pour la lecture de la réponse
+                PeerResponse response = socketManager.readResponse();
+                boolean exists = response.isSuccess();
+
+                // Mettre en cache le résultat
+                userExistsCache.put(username, exists);
+                userCacheTimestamps.put(username, System.currentTimeMillis());
+
+                future.complete(exists);
+            } catch (IOException e) {
+                System.err.println("Erreur lors de la vérification de l'utilisateur: " + e.getMessage());
+                future.complete(false);
+            }
+        });
+
         try {
-            Map<String, String> payload = new HashMap<>();
-            payload.put("username", username);
-
-            PeerRequest request = new PeerRequest(RequestType.CHECK_USER, payload);
-            socketManager.sendRequest(request);
-            PeerResponse response = socketManager.readResponse();
-
-            return response.isSuccess();
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la vérification de l'utilisateur: " + e.getMessage());
+            // Attendre la réponse avec un timeout de 2 secondes max
+            return future.get(2, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            System.err.println("Timeout lors de la vérification de l'utilisateur: " + e.getMessage());
             return false;
         }
     }
@@ -483,42 +514,83 @@ public class ChatController {
     public Map<String, Boolean> refreshContactStatuses() {
         // Copier la liste des contacts pour éviter les modifications concurrentes
         List<String> contactsToCheck = List.copyOf(contacts);
-
-        // Map des résultats
         Map<String, Boolean> results = new HashMap<>();
 
         if (contactsToCheck.isEmpty()) {
             return results;
         }
 
+        // Utiliser un CompletableFuture pour chaque contact
+        List<CompletableFuture<Map.Entry<String, Boolean>>> futures = new ArrayList<>();
+
+        for (String contact : contactsToCheck) {
+            // Créer un future pour chaque contact
+            CompletableFuture<Map.Entry<String, Boolean>> future = CompletableFuture.supplyAsync(() -> {
+                Boolean online = checkOnlineStatus(contact);
+                return Map.entry(contact, online);
+            });
+
+            futures.add(future);
+        }
+
         try {
-            // Demander le statut au serveur pour chaque contact
-            for (String contact : contactsToCheck) {
-                boolean online = false;
+            // Attendre que tous les futures soient terminés avec un timeout
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0])
+            );
+
+            // Timeout de 5 secondes pour l'ensemble des requêtes
+            allFutures.get(5, TimeUnit.SECONDS);
+
+            // Récupérer les résultats
+            for (CompletableFuture<Map.Entry<String, Boolean>> future : futures) {
                 try {
-                    Map<String, String> payload = new HashMap<>();
-                    payload.put("username", contact);
-
-                    PeerRequest request = new PeerRequest(RequestType.CHECK_ONLINE, payload);
-                    socketManager.sendRequest(request);
-                    PeerResponse response = socketManager.readResponse();
-
-                    if (response.isSuccess()) {
-                        online = true;
+                    Map.Entry<String, Boolean> entry = future.getNow(Map.entry("", false));
+                    if (!entry.getKey().isEmpty()) {
+                        results.put(entry.getKey(), entry.getValue());
+                        onlineStatusCache.put(entry.getKey(), entry.getValue());
                     }
                 } catch (Exception e) {
-                    System.err.println("Erreur lors de la vérification du statut de " + contact + ": " + e.getMessage());
+                    // Ignorer les futures qui ont échoué
                 }
-
-                // Mettre à jour le cache et les résultats
-                onlineStatusCache.put(contact, online);
-                results.put(contact, online);
             }
         } catch (Exception e) {
-            System.err.println("Erreur lors du rafraîchissement des statuts: " + e.getMessage());
+            System.err.println("Timeout lors du rafraîchissement des statuts: " + e.getMessage());
+            // Retourner les résultats partiels
         }
 
         return results;
+    }
+
+    // Méthode auxiliaire pour vérifier le statut en ligne d'un contact
+    private Boolean checkOnlineStatus(String username) {
+        // Vérifier le cache d'abord
+        Boolean cachedStatus = onlineStatusCache.get(username);
+        if (cachedStatus != null) {
+            // Utiliser la version en cache pour l'UI immédiate, mais rafraîchir en arrière-plan
+            CompletableFuture.runAsync(() -> {
+                try {
+                    boolean online = socketManager.isUserOnline(username);
+                    // Mettre à jour le cache
+                    onlineStatusCache.put(username, online);
+                    // Rafraîchir l'UI si le statut a changé
+                    if (online != cachedStatus && chatView != null) {
+                        Platform.runLater(() -> chatView.updateContactStatus(username, online));
+                    }
+                } catch (Exception e) {
+                    // Ignorer les erreurs en arrière-plan
+                }
+            });
+            return cachedStatus;
+        }
+
+        // Si pas de cache, faire la requête synchrone
+        try {
+            return socketManager.isUserOnline(username);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la vérification du statut de " + username + ": " + e.getMessage());
+            return false;
+        }
     }
 
     /**
