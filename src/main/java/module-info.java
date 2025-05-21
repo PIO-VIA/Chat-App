@@ -14,4 +14,6 @@ module org.personnal.serveur {
 
     opens org.personnal.serveur.protocol to com.google.gson;
     opens org.personnal.serveur.model to com.google.gson;
+    exports org.personnal.serveur.test;
+    opens org.personnal.serveur.test to javafx.fxml;
 }

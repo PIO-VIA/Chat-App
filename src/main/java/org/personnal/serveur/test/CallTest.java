@@ -1,4 +1,4 @@
-package org.personnal.serveur;
+package org.personnal.serveur.test;
 
 import org.personnal.serveur.protocol.PeerRequest;
 import org.personnal.serveur.protocol.PeerResponse;

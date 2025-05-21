@@ -1,4 +1,4 @@
-package org.personnal.serveur;
+package org.personnal.serveur.test;
 
 
 import com.google.gson.Gson;
