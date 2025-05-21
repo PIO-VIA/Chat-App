@@ -214,7 +214,7 @@ public class ContactsPanel {
 
         // Bouton de rafraîchissement des contacts avec indicateur de progression
         StackPane refreshStack = new StackPane();
-        refreshContactsButton = new Button("🔄");
+        refreshContactsButton = new Button("🔄 R");
         refreshContactsButton.getStyleClass().add("icon-button");
         refreshContactsButton.setTooltip(new Tooltip("Rafraîchir le statut des contacts"));
         refreshContactsButton.setOnAction(e -> refreshContactStatuses());
