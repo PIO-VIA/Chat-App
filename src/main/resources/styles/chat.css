@@ -330,7 +330,7 @@
     -fx-background-radius: 3px;
 }
 .call-button {
-    -fx-background-color: #28a745;
+    -fx-background-color: linear-gradient(to bottom right, #29AAE3, #7D82E5);
     -fx-text-fill: white;
     -fx-font-size: 16px;
     -fx-background-radius: 50%;
@@ -340,12 +340,20 @@
     -fx-max-height: 40px;
     -fx-padding: 0;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 2);
+    -fx-transition: all 0.2s ease-out;
 }
 
 .call-button:hover {
-    -fx-background-color: #218838;
+    -fx-background-color: linear-gradient(to bottom right, #1D8BBF, #6B6FCC);
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 7, 0, 0, 3);
 }
 
 .call-button:pressed {
-    -fx-background-color: #1e7e34;
+    -fx-background-color: linear-gradient(to bottom right, #1776A1, #5A5EB8);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);
 }
