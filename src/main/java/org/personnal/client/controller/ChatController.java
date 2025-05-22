@@ -192,7 +192,10 @@ public class ChatController {
      * Envoie un message à l'utilisateur actuellement sélectionné et le sauvegarde en local
      */
     public boolean sendMessage(String receiver, String content) {
+        System.out.println("🚀 [DEBUG] Début sendMessage - receiver: " + receiver + ", content: " + content);
+
         if (receiver == null || receiver.isEmpty() || content == null || content.isEmpty()) {
+            System.out.println("❌ [DEBUG] Paramètres invalides");
             return false;
         }
 
@@ -204,50 +207,75 @@ public class ChatController {
             payload.put("content", content);
             payload.put("read", "false");
 
+            System.out.println("📦 [DEBUG] Payload créé: " + payload);
+
             // Créer un objet Message pour l'interface (optimiste)
             Message message = new Message();
             message.setSender(currentUsername);
             message.setReceiver(receiver);
             message.setContent(content);
             message.setTimestamp(LocalDateTime.now());
-            message.setRead(true); // Les messages que nous envoyons sont considérés comme lus
+            message.setRead(true);
 
-            // Ajouter le message à la vue immédiatement (UI plus réactive)
-            if (chatView != null) {
-                chatView.addMessageToConversation(message);
+            System.out.println("💬 [DEBUG] Message object créé: " + message.getContent());
+
+            // Vérifier l'état de la connexion
+            if (socketManager == null) {
+                System.out.println("❌ [DEBUG] SocketManager est null!");
+                return false;
             }
+
+            System.out.println("🔗 [DEBUG] SocketManager OK, envoi en cours...");
 
             // Envoyer le message au serveur en arrière-plan
             CompletableFuture.runAsync(() -> {
                 try {
+                    System.out.println("📡 [DEBUG] Création de la requête...");
+
                     // Envoyer la requête
                     PeerRequest request = new PeerRequest(RequestType.SEND_MESSAGE, payload);
+                    System.out.println("📤 [DEBUG] Envoi de la requête au serveur...");
+
                     socketManager.sendRequest(request);
+                    System.out.println("⏳ [DEBUG] Requête envoyée, attente de la réponse...");
+
                     PeerResponse response = socketManager.readResponse();
+                    System.out.println("📥 [DEBUG] Réponse reçue: success=" + response.isSuccess() +
+                            ", message=" + response.getMessage());
 
                     if (response.isSuccess()) {
                         // Sauvegarder le message dans la BD locale
+                        System.out.println("💾 [DEBUG] Sauvegarde en BD...");
                         messageDAO.saveMessage(message);
+                        System.out.println("✅ [DEBUG] Message sauvegardé avec succès");
+
+                        // Rafraîchir l'UI
+                        Platform.runLater(() -> {
+                            System.out.println("🔄 [DEBUG] Rafraîchissement de l'UI...");
+                            if (chatView != null && receiver.equals(currentChatPartner)) {
+                                chatView.refreshMessages();
+                            }
+                        });
                     } else {
-                        // Afficher une notification d'erreur
+                        System.out.println("❌ [DEBUG] Échec de l'envoi: " + response.getMessage());
                         showNotification("Erreur lors de l'envoi du message: " + response.getMessage());
                     }
                 } catch (IOException e) {
-                    System.err.println("Erreur lors de l'envoi du message: " + e.getMessage());
-                    showNotification("Problème de connexion. Le message a été sauvegardé localement.");
-
-                    // Sauvegarder quand même le message en local pour avoir une trace
-                    try {
-                        messageDAO.saveMessage(message);
-                    } catch (Exception dbError) {
-                        System.err.println("Erreur supplémentaire lors de la sauvegarde en local: " + dbError.getMessage());
-                    }
+                    System.err.println("💥 [DEBUG] Exception IOException: " + e.getMessage());
+                    e.printStackTrace();
+                    showNotification("Problème de connexion lors de l'envoi du message.");
+                } catch (Exception e) {
+                    System.err.println("💥 [DEBUG] Exception générale: " + e.getMessage());
+                    e.printStackTrace();
+                    showNotification("Erreur inattendue lors de l'envoi du message.");
                 }
             });
 
+            System.out.println("✅ [DEBUG] sendMessage retourne true");
             return true;
         } catch (Exception e) {
-            System.err.println("Erreur grave lors de l'envoi du message: " + e.getMessage());
+            System.err.println("💥 [DEBUG] Exception dans sendMessage: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -340,44 +368,44 @@ public class ChatController {
                 return;
             }
 
-            // Créer un FileData pour l'affichage immédiat (UI réactive)
+            // Créer un FileData pour la base de données
             FileData fileData = new FileData();
             fileData.setSender(currentUsername);
             fileData.setReceiver(currentChatPartner);
             fileData.setFilename(file.getName());
-            fileData.setFilepath(saveFileLocally(file)); // Sauvegarder immédiatement une copie locale
+            fileData.setFilepath(saveFileLocally(file));
             fileData.setTimestamp(LocalDateTime.now());
             fileData.setRead(true);
 
-            // *** CORRECTION : Sauvegarder immédiatement en BD ***
-            try {
-                fileDAO.saveFile(fileData);
-                System.out.println("Fichier sauvegardé localement avant envoi : " + fileData.getFilename());
-            } catch (Exception e) {
-                System.err.println("Erreur lors de la sauvegarde locale : " + e.getMessage());
-                showNotification("Erreur lors de la sauvegarde du fichier.");
-                return;
-            }
-
-            // Rafraîchir l'interface pour afficher le fichier depuis la BD
-            if (chatView != null) {
-                Platform.runLater(() -> chatView.refreshMessages());
-            }
+            // Afficher un indicateur de progression
+            Platform.runLater(() -> {
+                if (chatView != null) {
+                    // Montrer que l'envoi est en cours
+                    showNotification("Envoi du fichier en cours...");
+                }
+            });
 
             // Envoi en arrière-plan
             fileTransferExecutor.submit(() -> {
                 try {
                     sendFileInBackground(currentChatPartner, file, fileData);
+
+                    // Sauvegarder en BD seulement après envoi réussi
+                    fileDAO.saveFile(fileData);
+
+                    Platform.runLater(() -> {
+                        if (chatView != null) {
+                            chatView.refreshMessages();
+                            showNotification("Fichier envoyé avec succès!");
+                        }
+                    });
+
                     System.out.println("Fichier envoyé avec succès au serveur : " + fileData.getFilename());
                 } catch (Exception e) {
                     System.err.println("Erreur lors de l'envoi du fichier: " + e.getMessage());
-                    Platform.runLater(() ->
-                            showNotification("Erreur lors de l'envoi du fichier: " + e.getMessage())
-                    );
-
-                    // *** OPTIONNEL : Supprimer le fichier de la BD si l'envoi échoue ***
-                    fileDAO.deleteFileById(fileData.getId());
-                    Platform.runLater(() -> chatView.refreshMessages());
+                    Platform.runLater(() -> {
+                        showNotification("Erreur lors de l'envoi du fichier: " + e.getMessage());
+                    });
                 }
             });
         }

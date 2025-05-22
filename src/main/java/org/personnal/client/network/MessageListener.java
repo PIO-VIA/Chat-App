@@ -11,7 +11,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Map;
 
 /**
@@ -219,19 +224,55 @@ public class MessageListener extends Thread {
             Map<String, String> fileData = (Map<String, String>) response.getData();
             String sender = fileData.get("from");
             String filename = fileData.get("filename");
-            String content = fileData.get("content");
+            String base64Content = fileData.get("content");
 
+            if (sender == null || filename == null || base64Content == null) {
+                System.err.println("Données de fichier incomplètes reçues");
+                return;
+            }
+
+            // Décoder le contenu Base64
+            byte[] fileBytes;
+            try {
+                fileBytes = Base64.getDecoder().decode(base64Content);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Erreur lors du décodage Base64 du fichier: " + e.getMessage());
+                return;
+            }
+
+            // Créer un nom de fichier unique
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String uniqueFilename = timestamp + "_" + filename;
+
+            // Définir le chemin de sauvegarde
+            String filesDirectory = "files/" + currentUsername;
+            Path filePath = Paths.get(filesDirectory, uniqueFilename);
+
+            // Créer le répertoire si nécessaire
+            try {
+                Files.createDirectories(filePath.getParent());
+                // Sauvegarder le fichier physiquement
+                Files.write(filePath, fileBytes);
+            } catch (IOException e) {
+                System.err.println("Erreur lors de la sauvegarde du fichier: " + e.getMessage());
+                return;
+            }
+
+            // Créer l'objet FileData
             FileData file = new FileData();
             file.setSender(sender);
             file.setReceiver(currentUsername);
             file.setFilename(filename);
+            file.setFilepath(filePath.toString());
             file.setTimestamp(LocalDateTime.now());
             file.setRead(false);
 
             // Afficher le fichier dans l'interface graphique
             Platform.runLater(() -> {
                 try {
-                    chatView.addFileToConversation(file);
+                    if (chatView != null) {
+                        chatView.addFileToConversation(file);
+                    }
                 } catch (Exception e) {
                     System.err.println("Erreur lors de l'ajout du fichier à l'UI: " + e.getMessage());
                 }
