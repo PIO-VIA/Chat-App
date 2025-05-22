@@ -18,6 +18,8 @@ import org.personnal.client.UI.dialogs.DialogManager;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Vue principale de l'application de chat
@@ -133,33 +135,50 @@ public class ChatView {
     /**
      * Envoie un message au contact actuel
      */
+    /**
+     * Envoie un message au contact actuel
+     */
     private void sendMessage() {
         String content = messagesPanel.getMessageText();
+        System.out.println("🎯 [DEBUG ChatView] sendMessage appelé, content: '" + content + "'");
+        System.out.println("🎯 [DEBUG ChatView] currentChatPartner: " + currentChatPartner);
+
         if (!content.isEmpty() && currentChatPartner != null) {
+            System.out.println("🎯 [DEBUG ChatView] Conditions OK, appel du controller...");
+
             // Afficher l'indicateur d'envoi
             messagesPanel.showSendingIndicator(true);
 
+            // Envoyer le message (le controller gère l'affichage asynchrone)
             boolean success = controller.sendMessage(currentChatPartner, content);
+            System.out.println("🎯 [DEBUG ChatView] Retour du controller: " + success);
+
             if (success) {
+                // Effacer seulement le champ de saisie
                 messagesPanel.clearMessageInput();
+                System.out.println("🎯 [DEBUG ChatView] Input effacé");
 
-                // Recharger la conversation pour afficher le nouveau message
-                messages.clear();
-                controller.loadMessagesForContact(currentChatPartner).forEach(messages::add);
+                // *** Pas de rechargement ici - le controller s'en charge ***
 
-                // Défilement vers le dernier message
-                Platform.runLater(() -> {
-                    if (!messages.isEmpty()) {
-                        messagesPanel.scrollToLastMessage();
+                // Timer de sécurité pour masquer l'indicateur si pas de réponse du serveur
+                Timer timer = new Timer();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        Platform.runLater(() -> {
+                            messagesPanel.showSendingIndicator(false);
+                            System.out.println("⏰ [DEBUG ChatView] Timer de sécurité - indicateur masqué");
+                        });
                     }
+                }, 10000); // 10 secondes maximum
 
-                    // Masquer l'indicateur d'envoi
-                    messagesPanel.showSendingIndicator(false);
-                });
             } else {
-                // Masquer l'indicateur d'envoi en cas d'échec
+                System.out.println("❌ [DEBUG ChatView] Échec de l'envoi");
                 messagesPanel.showSendingIndicator(false);
             }
+        } else {
+            System.out.println("❌ [DEBUG ChatView] Conditions non remplies - content vide: " +
+                    content.isEmpty() + ", currentChatPartner null: " + (currentChatPartner == null));
         }
     }
 
