@@ -2,68 +2,103 @@
 
 /* Variables de couleur */
 * {
-    -fx-primary-color: #1a6fc7;
-    -fx-secondary-color: #2e8ede;
-    -fx-light-grey: #f5f5f5;
-    -fx-mid-grey: #ddd;
-    -fx-dark-grey: #555;
-    -fx-message-sent-bg: #dcf8c6;
-    -fx-message-received-bg: #ffffff;
-    -fx-unread-indicator: #ff4d4d;
-    -fx-online-status: #4cd964;
-    -fx-offline-status: #aaaaaa;
-    -fx-chat-bg: #e5ddd5;
-    -fx-avatar-color: #1a6fc7;
+    /* Palette de bleus */
+    -fx-primary-color: #29AAE3;           /* Bleu principal */
+    -fx-secondary-color: #45B7E8;         /* Bleu secondaire */
+    -fx-primary-dark: #1D8BBF;            /* Bleu foncé pour hover/pressed */
+    -fx-primary-light: #6CC5ED;           /* Bleu clair pour accents */
+    -fx-primary-gradient: linear-gradient(to bottom right, #29AAE3, #57BBE9); /* Dégradé bleu */
+    -fx-accent-gradient: linear-gradient(to bottom right, #29AAE3, #6CC5ED); /* Dégradé accent */
+
+    /* Palette neutre */
+    -fx-light-grey: #f7f9fc;              /* Gris très clair pour fonds */
+    -fx-mid-grey: #e0e6ed;                /* Gris moyen pour bordures */
+    -fx-dark-grey: #485563;               /* Gris foncé pour texte secondaire */
+
+    /* Couleurs fonctionnelles */
+    -fx-message-sent-bg: linear-gradient(to bottom right, #dcf8c6, #c3f0a9); /* Dégradé pour messages envoyés */
+    -fx-message-received-bg: linear-gradient(to bottom right, #ffffff, #f5f7fb); /* Dégradé pour messages reçus */
+    -fx-unread-indicator: #ff4d4d;         /* Indicateur messages non lus */
+    -fx-online-status: #4cd964;            /* Statut en ligne */
+    -fx-offline-status: #aaaaaa;           /* Statut hors ligne */
+    -fx-chat-bg: #eef2f7;                  /* Fond zone de chat */
+    -fx-avatar-color: linear-gradient(to bottom right, #29AAE3, #57BBE9); /* Dégradé pour avatars */
+
+    /* Ombres et effets */
+    -fx-card-shadow: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 4); /* Ombre standard */
+    -fx-hover-shadow: dropshadow(gaussian, rgba(41,170,227,0.2), 12, 0, 0, 6); /* Ombre au survol */
+    -fx-button-shadow: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 2); /* Ombre boutons */
 }
 
 /* Styles généraux */
 .root {
-    -fx-font-family: "Arial";
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
     -fx-font-size: 13px;
     -fx-background-color: white;
 }
 
 /* Boutons */
 .button {
-    -fx-background-color: -fx-primary-color;
+    -fx-background-color: -fx-primary-gradient;
     -fx-text-fill: white;
-    -fx-background-radius: 3px;
-    -fx-padding: 8px 12px;
+    -fx-background-radius: 20px;
+    -fx-padding: 10px 20px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
+    -fx-effect: -fx-button-shadow;
+    -fx-border-width: 0;
+    -fx-transition: all 0.2s ease-in-out;
 }
 
 .button:hover {
-    -fx-background-color: derive(-fx-primary-color, -10%);
+    -fx-background-color: -fx-primary-dark;
+    -fx-effect: -fx-hover-shadow;
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
 }
 
 .button:pressed {
-    -fx-background-color: derive(-fx-primary-color, -20%);
+    -fx-background-color: derive(-fx-primary-dark, -10%);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);
 }
 
 /* Icône boutons */
 .icon-button {
     -fx-background-color: transparent;
     -fx-text-fill: -fx-primary-color;
-    -fx-padding: 4px;
+    -fx-padding: 6px;
     -fx-font-size: 16px;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-width: 0;
+    -fx-transition: all 0.15s ease-out;
 }
 
 .icon-button:hover {
-    -fx-background-color: rgba(0, 0, 0, 0.05);
+    -fx-background-color: rgba(26, 111, 199, 0.1);
+    -fx-effect: -fx-hover-shadow;
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-rotate: 3deg;
 }
 
 /* Champs texte */
 .text-field {
-    -fx-background-color: -fx-light-grey;
-    -fx-background-radius: 3px;
+    -fx-background-color: white;
+    -fx-background-radius: 20px;
     -fx-border-color: -fx-mid-grey;
-    -fx-border-radius: 3px;
-    -fx-padding: 8px;
+    -fx-border-radius: 20px;
+    -fx-padding: 10px 15px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 5, 0, 0, 1);
+    -fx-transition: all 0.2s ease-in-out;
 }
 
 .text-field:focused {
     -fx-border-color: -fx-primary-color;
+    -fx-background-color: white;
+    -fx-effect: -fx-card-shadow;
 }
 
 /* Hyperliens */
@@ -85,22 +120,31 @@
 .list-view {
     -fx-background-color: white;
     -fx-border-color: -fx-mid-grey;
-    -fx-border-radius: 3px;
-    -fx-padding: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 2px;
+    -fx-effect: -fx-card-shadow;
 }
 
 .list-cell {
-    -fx-padding: 8px;
+    -fx-padding: 10px 12px;
     -fx-background-color: white;
     -fx-border-color: transparent transparent -fx-mid-grey transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-transition: all 0.15s ease-out;
 }
 
 .list-cell:selected {
-    -fx-background-color: derive(-fx-primary-color, 80%);
+    -fx-background-color: derive(-fx-primary-color, 85%);
+    -fx-border-width: 0 0 0 4px;
+    -fx-border-color: -fx-primary-color;
+    -fx-padding: 10px 12px 10px 8px;
 }
 
 .list-cell:hover {
-    -fx-background-color: derive(-fx-light-grey, 10%);
+    -fx-background-color: derive(-fx-light-grey, 5%);
+    -fx-translate-x: 2px;
+    -fx-transition: all 0.2s ease-out;
 }
 
 /* Panneaux de division */
@@ -160,6 +204,39 @@
 }
 
 /* Barres de progression */
+.progress-bar {
+    -fx-background-color: -fx-light-grey;
+    -fx-background-radius: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 2, 0, 0, 1);
+}
+
+.progress-bar > .bar {
+    -fx-background-color: -fx-primary-gradient;
+    -fx-background-radius: 10px;
+    -fx-background-insets: 0;
+    -fx-effect: innershadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 0);
+}
+
+/* Animations globales */
+.animate-scale {
+    -fx-transition: all 0.2s ease-out;
+}
+
+.animate-scale:hover {
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.animate-pulse {
+    -fx-animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { -fx-opacity: 1; }
+    50% { -fx-opacity: 0.6; }
+    100% { -fx-opacity: 1; }
+}
+
 .progress-indicator {
     -fx-progress-color: -fx-primary-color;
 }

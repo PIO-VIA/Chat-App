@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulaire Élégant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <form id="monFormulaire">
+            <h1>Créez votre compte</h1>
+            
+            <div class="form-group">
+                <input type="text" id="nom" required>
+                <label for="nom">Nom complet</label>
+                <div class="underline"></div>
+            </div>
+
+            <div class="form-group">
+                <input type="email" id="email" required>
+                <label for="email">Adresse email</label>
+                <div class="underline"></div>
+            </div>
+
+            <div class="form-group">
+                <input type="password" id="motdepasse" required>
+                <label for="motdepasse">Mot de passe</label>
+                <div class="underline"></div>
+            </div>
+
+            <button type="submit">
+                <span>S'inscrire</span>
+                <div class="liquid"></div>
+            </button>
+        </form>
+
+        <div class="success-message">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/>
+            </svg>
+            <p>Inscription réussie !</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -46,87 +46,126 @@ public class DialogManager {
      */
     public void showAddContactDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
-        // Ne pas définir le propriétaire pour éviter les erreurs
-        dialog.setTitle("Ajouter un contact");
-        dialog.setHeaderText("Ajouter un nouveau contact");
+        dialog.setTitle("Ajouter un nouveau contact");
+        dialog.setHeaderText(null);
 
-        // Appliquer les classes CSS
         DialogPane dialogPane = dialog.getDialogPane();
-        dialogPane.getStyleClass().add("dialog-pane");
+        dialogPane.getStyleClass().add("add-contact-dialog");
 
-        // Icône en haut à gauche
-        Label iconLabel = new Label(ICON_ADD);
-        iconLabel.setFont(Font.font("FontAwesome", 24));
-        iconLabel.setTextFill(Color.WHITE);
-        dialogPane.setGraphic(iconLabel);
+        // Charger les feuilles de style
+        dialogPane.getStylesheets().addAll(
+                getClass().getResource("/styles/global.css").toExternalForm(),
+                getClass().getResource("/styles/dialogs.css").toExternalForm()
+        );
 
-        // Boutons
-        ButtonType addButtonType = new ButtonType("Ajouter", ButtonBar.ButtonData.OK_DONE);
-        dialogPane.getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+        // Conteneur principal
+        VBox rootBox = new VBox(15);
+        rootBox.setAlignment(Pos.CENTER);
+        rootBox.setPadding(new Insets(0, 0, 10, 0));
 
-        // Style des boutons
-        Button addButton = (Button) dialogPane.lookupButton(addButtonType);
-        addButton.getStyleClass().add("settings-button");
+        // Titre
+        Label titleLabel = new Label("Ajouter un contact");
+        titleLabel.setStyle(
+                "-fx-font-size: 20px; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-text-fill: #333333; " +
+                        "-fx-padding: 0 0 10px 0;"
+        );
 
-        Button cancelButton = (Button) dialogPane.lookupButton(ButtonType.CANCEL);
-        cancelButton.getStyleClass().add("settings-button");
-        cancelButton.getStyleClass().add("cancel-button");
-
-        // Formulaire
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20));
-
-        // Icônes pour les champs
-        Label userIcon = new Label(ICON_USER);
-        userIcon.setFont(Font.font("FontAwesome", 16));
-        userIcon.setTextFill(Color.valueOf("#1a6fc7"));
-
-        Label emailIcon = new Label(ICON_EMAIL);
-        emailIcon.setFont(Font.font("FontAwesome", 16));
-        emailIcon.setTextFill(Color.valueOf("#1a6fc7"));
-
+        // Champ nom d'utilisateur
         TextField usernameField = new TextField();
         usernameField.setPromptText("Nom d'utilisateur");
-        usernameField.getStyleClass().add("text-field");
+        usernameField.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-border-color: #dddddd; " +
+                        "-fx-border-radius: 4px; " +
+                        "-fx-padding: 10px; " +
+                        "-fx-pref-height: 40px;"
+        );
+        usernameField.setMaxWidth(Double.MAX_VALUE);
 
+        // Champ email
         TextField emailField = new TextField();
         emailField.setPromptText("Email (optionnel)");
-        emailField.getStyleClass().add("text-field");
+        emailField.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-border-color: #dddddd; " +
+                        "-fx-border-radius: 4px; " +
+                        "-fx-padding: 10px; " +
+                        "-fx-pref-height: 40px;"
+        );
+        emailField.setMaxWidth(Double.MAX_VALUE);
 
-        grid.add(userIcon, 0, 0);
-        grid.add(usernameField, 1, 0);
-        grid.add(emailIcon, 0, 1);
-        grid.add(emailField, 1, 1);
+        // Boutons
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+        buttonBox.setPadding(new Insets(10, 0, 0, 0));
 
-        // Explication
-        Label infoLabel = new Label("Entrez le nom d'utilisateur exact du contact que vous souhaitez ajouter. " +
-                "L'email est optionnel et peut vous aider à identifier votre contact.");
+        Button cancelButton = new Button("Annuler");
+        cancelButton.getStyleClass().add("cancel-button");
+        cancelButton.setCancelButton(true);
+        cancelButton.setMinWidth(100);
+
+        Button addButton = new Button("Ajouter");
+        addButton.getStyleClass().add("add-contact-button");
+        addButton.setDefaultButton(true);
+        addButton.setMinWidth(100);
+
+        buttonBox.getChildren().addAll(cancelButton, addButton);
+
+        // Message d'aide
+        Label infoLabel = new Label(
+                "Entrez le nom d'utilisateur exact du contact que vous souhaitez ajouter. " +
+                        "L'email est optionnel et peut vous aider à identifier votre contact."
+        );
         infoLabel.setWrapText(true);
-        infoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-        grid.add(infoLabel, 0, 2, 2, 1);
+        infoLabel.setStyle(
+                "-fx-text-fill: #666666; " +
+                        "-fx-font-size: 12px; " +
+                        "-fx-padding: 10px 0 0 0;"
+        );
+        infoLabel.setAlignment(Pos.CENTER);
 
-        dialog.getDialogPane().setContent(grid);
+        // Ajout des éléments au conteneur principal
+        rootBox.getChildren().addAll(titleLabel, usernameField, emailField, buttonBox, infoLabel);
 
-        // Traitement du résultat - en utilisant Platform.runLater pour éviter les problèmes
-        Platform.runLater(() -> {
-            Optional<ButtonType> result = dialog.showAndWait();
-            if (result.isPresent() && result.get() == addButtonType) {
-                String username = usernameField.getText().trim();
-                String email = emailField.getText().trim();
+        // Fixer la taille de la boîte de dialogue comme la page de connexion
+        dialogPane.setContent(rootBox);
+        dialogPane.setPrefWidth(420);
+        dialogPane.setMinWidth(370);
+        dialogPane.setMaxWidth(420);
+        rootBox.setPrefWidth(400);
+        rootBox.setMinWidth(370);
+        rootBox.setMaxWidth(420);
 
-                if (!username.isEmpty()) {
-                    if (controller.addContact(username, email)) {
-                        showAlert(Alert.AlertType.INFORMATION, "Contact ajouté",
-                                "Le contact " + username + " a été ajouté avec succès.");
-                    } else {
-                        showAlert(Alert.AlertType.ERROR, "Erreur",
-                                "Impossible d'ajouter le contact. Vérifiez que l'utilisateur existe et n'est pas déjà dans vos contacts.");
-                    }
+        // Gestion des actions
+        addButton.setOnAction(e -> {
+            String username = usernameField.getText().trim();
+            String email = emailField.getText().trim();
+            if (!username.isEmpty()) {
+                if (controller.addContact(username, email)) {
+                    showAlert(Alert.AlertType.INFORMATION, "Contact ajouté",
+                            "Le contact " + username + " a été ajouté avec succès.");
+                    dialog.setResult(ButtonType.OK);
+                    dialog.close();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Erreur",
+                            "Impossible d'ajouter le contact. Vérifiez que l'utilisateur existe et n'est pas déjà dans vos contacts.");
                 }
             }
         });
+        cancelButton.setOnAction(e -> {
+            dialog.setResult(ButtonType.CANCEL);
+            dialog.close();
+        });
+        // Fermer aussi avec la croix (bouton de fermeture)
+        dialog.setOnCloseRequest(event -> {
+            dialog.setResult(ButtonType.CLOSE);
+            dialog.close();
+        });
+
+        // Affichage du dialogue
+        Platform.runLater(dialog::showAndWait);
     }
 
     /**

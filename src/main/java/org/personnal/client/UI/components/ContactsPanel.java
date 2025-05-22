@@ -74,7 +74,16 @@ public class ContactsPanel {
         // Liste des contacts
         contactListView = new ListView<>(contacts);
         contactListView.getStyleClass().add("contact-list");
+        // Désactiver complètement les barres de séparation entre les éléments
         contactListView.setCellFactory(createContactCellFactory());
+        contactListView.setStyle("-fx-background-insets: 0; -fx-padding: 0; -fx-border-width: 0; -fx-background-color: white;");
+        contactListView.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+            // Supprimer toute ligne persistante après sélection
+            Platform.runLater(() -> {
+                // Forcer le rafraîchissement de la vue pour éliminer les lignes
+                contactListView.refresh();
+            });
+        });
 
         // Assemblage du panneau gauche
         panel.setTop(userHeader);
@@ -111,9 +120,12 @@ public class ContactsPanel {
                 if (empty || contact == null) {
                     setText(null);
                     setGraphic(null);
+                    // S'assurer que les cellules vides n'ont pas de bordures
+                    setStyle("-fx-border-width: 0; -fx-border-color: transparent;");
                 } else {
-                    // Appliquer le style CSS à la cellule
+                    // Appliquer le style CSS à la cellule et supprimer les bordures
                     getStyleClass().add("contact-cell");
+                    setStyle("-fx-border-width: 0; -fx-border-color: transparent;");
 
                     HBox contactBox = new HBox(10);
                     contactBox.setAlignment(Pos.CENTER_LEFT);
