@@ -115,6 +115,12 @@ public class ChatController {
         // Démarrer le listener de messages
         socketManager.startMessageListener(chatView, currentUsername);
 
+        // Charger les statuts des contacts en arrière-plan
+        preloadContactStatuses();
+
+        // Démarrer la mise à jour périodique
+        startPeriodicStatusUpdate();
+
         System.out.println("ChatView configurée pour l'utilisateur " + currentUsername);
     }
 
@@ -343,20 +349,35 @@ public class ChatController {
             fileData.setTimestamp(LocalDateTime.now());
             fileData.setRead(true);
 
-            // Ajouter immédiatement à l'UI
+            // *** CORRECTION : Sauvegarder immédiatement en BD ***
+            try {
+                fileDAO.saveFile(fileData);
+                System.out.println("Fichier sauvegardé localement avant envoi : " + fileData.getFilename());
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la sauvegarde locale : " + e.getMessage());
+                showNotification("Erreur lors de la sauvegarde du fichier.");
+                return;
+            }
+
+            // Rafraîchir l'interface pour afficher le fichier depuis la BD
             if (chatView != null) {
-                chatView.addFileToConversation(fileData);
+                Platform.runLater(() -> chatView.refreshMessages());
             }
 
             // Envoi en arrière-plan
             fileTransferExecutor.submit(() -> {
                 try {
                     sendFileInBackground(currentChatPartner, file, fileData);
+                    System.out.println("Fichier envoyé avec succès au serveur : " + fileData.getFilename());
                 } catch (Exception e) {
                     System.err.println("Erreur lors de l'envoi du fichier: " + e.getMessage());
                     Platform.runLater(() ->
                             showNotification("Erreur lors de l'envoi du fichier: " + e.getMessage())
                     );
+
+                    // *** OPTIONNEL : Supprimer le fichier de la BD si l'envoi échoue ***
+                    fileDAO.deleteFileById(fileData.getId());
+                    Platform.runLater(() -> chatView.refreshMessages());
                 }
             });
         }
@@ -440,12 +461,12 @@ public class ChatController {
         socketManager.sendRequest(request);
         PeerResponse response = socketManager.readResponse();
 
-        if (response.isSuccess()) {
-            // Sauvegarder le fichier dans la BD locale
-            fileDAO.saveFile(fileData);
-        } else {
+        if (!response.isSuccess()) {
             throw new IOException("Échec de l'envoi: " + response.getMessage());
         }
+
+
+        System.out.println("Fichier envoyé avec succès au serveur : " + fileData.getFilename());
     }
 
     /**
@@ -463,49 +484,10 @@ public class ChatController {
             return false;
         }
 
-        // Vérifier le cache d'abord
-        if (userExistsCache.containsKey(username)) {
-            Long timestamp = userCacheTimestamps.get(username);
-            if (timestamp != null && System.currentTimeMillis() - timestamp < USER_CACHE_DURATION) {
-                return userExistsCache.get(username);
-            }
-        }
-
-        // Définir un timeout court pour cette requête
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-
-        // Exécuter la vérification en arrière-plan
-        CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, String> payload = new HashMap<>();
-                payload.put("username", username);
-
-                PeerRequest request = new PeerRequest(RequestType.CHECK_USER, payload);
-                socketManager.sendRequest(request);
-
-                // Utiliser un timeout plus court pour la lecture de la réponse
-                PeerResponse response = socketManager.readResponse();
-                boolean exists = response.isSuccess();
-
-                // Mettre en cache le résultat
-                userExistsCache.put(username, exists);
-                userCacheTimestamps.put(username, System.currentTimeMillis());
-
-                future.complete(exists);
-            } catch (IOException e) {
-                System.err.println("Erreur lors de la vérification de l'utilisateur: " + e.getMessage());
-                future.complete(false);
-            }
-        });
-
-        try {
-            // Attendre la réponse avec un timeout de 2 secondes max
-            return future.get(2, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            System.err.println("Timeout lors de la vérification de l'utilisateur: " + e.getMessage());
-            return false;
-        }
+        // Déléguer au SocketManager qui gère le cache intelligent
+        return socketManager.checkUserExists(username);
     }
+
 
     /**
      * Rafraîchit le statut en ligne de tous les contacts
@@ -514,53 +496,34 @@ public class ChatController {
     public Map<String, Boolean> refreshContactStatuses() {
         // Copier la liste des contacts pour éviter les modifications concurrentes
         List<String> contactsToCheck = List.copyOf(contacts);
-        Map<String, Boolean> results = new HashMap<>();
 
         if (contactsToCheck.isEmpty()) {
-            return results;
-        }
-
-        // Utiliser un CompletableFuture pour chaque contact
-        List<CompletableFuture<Map.Entry<String, Boolean>>> futures = new ArrayList<>();
-
-        for (String contact : contactsToCheck) {
-            // Créer un future pour chaque contact
-            CompletableFuture<Map.Entry<String, Boolean>> future = CompletableFuture.supplyAsync(() -> {
-                Boolean online = checkOnlineStatus(contact);
-                return Map.entry(contact, online);
-            });
-
-            futures.add(future);
+            return new HashMap<>();
         }
 
         try {
-            // Attendre que tous les futures soient terminés avec un timeout
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0])
-            );
+            // Utiliser la requête par lot pour tous les contacts
+            CompletableFuture<Map<String, Boolean>> future = socketManager.batchCheckOnlineStatus(contactsToCheck);
 
-            // Timeout de 5 secondes pour l'ensemble des requêtes
-            allFutures.get(5, TimeUnit.SECONDS);
+            // Attendre avec un timeout raisonnable
+            Map<String, Boolean> results = future.get(8, TimeUnit.SECONDS);
 
-            // Récupérer les résultats
-            for (CompletableFuture<Map.Entry<String, Boolean>> future : futures) {
-                try {
-                    Map.Entry<String, Boolean> entry = future.getNow(Map.entry("", false));
-                    if (!entry.getKey().isEmpty()) {
-                        results.put(entry.getKey(), entry.getValue());
-                        onlineStatusCache.put(entry.getKey(), entry.getValue());
-                    }
-                } catch (Exception e) {
-                    // Ignorer les futures qui ont échoué
-                }
-            }
+            // Mettre à jour le cache local
+            onlineStatusCache.putAll(results);
+
+            return results;
+
+        } catch (TimeoutException e) {
+            System.err.println("Timeout lors du rafraîchissement des statuts des contacts");
+            return new HashMap<>();
         } catch (Exception e) {
-            System.err.println("Timeout lors du rafraîchissement des statuts: " + e.getMessage());
-            // Retourner les résultats partiels
+            System.err.println("Erreur lors du rafraîchissement des statuts: " + e.getMessage());
+            return new HashMap<>();
         }
-
-        return results;
     }
+
+
+
 
     // Méthode auxiliaire pour vérifier le statut en ligne d'un contact
     private Boolean checkOnlineStatus(String username) {
@@ -695,10 +658,88 @@ public class ChatController {
      * Utilise le cache local pour éviter des requêtes répétées
      */
     public boolean isUserOnline(String username) {
-        Boolean status = onlineStatusCache.get(username);
-        // Par défaut, considérer que l'utilisateur est hors ligne s'il n'est pas dans le cache
-        return status != null && status;
+        if (username == null || username.isEmpty()) {
+            return false;
+        }
+
+        // Déléguer au SocketManager qui gère le cache et les requêtes asynchrones
+        return socketManager.isUserOnline(username);
     }
+
+    /**
+     * *** CHARGEMENT PRÉEMPTIF DES STATUTS ***
+     * Charge les statuts de tous les contacts en arrière-plan au démarrage
+     */
+    public void preloadContactStatuses() {
+        if (contacts.isEmpty()) {
+            return;
+        }
+
+        // Charger les statuts en arrière-plan sans bloquer l'UI
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<String> contactsList = List.copyOf(contacts);
+                socketManager.batchCheckOnlineStatus(contactsList)
+                        .thenAccept(results -> {
+                            // Mettre à jour le cache local
+                            onlineStatusCache.putAll(results);
+
+                            // Rafraîchir l'UI si nécessaire
+                            if (chatView != null) {
+                                Platform.runLater(() -> chatView.updateContactList());
+                            }
+                        })
+                        .exceptionally(throwable -> {
+                            System.err.println("Erreur lors du chargement préemptif des statuts: " + throwable.getMessage());
+                            return null;
+                        });
+            } catch (Exception e) {
+                System.err.println("Erreur lors du chargement préemptif: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * *** MISE À JOUR PÉRIODIQUE DES STATUTS ***
+     * Actualise périodiquement les statuts sans intervention de l'utilisateur
+     */
+    private final ScheduledExecutorService statusUpdateScheduler = Executors.newSingleThreadScheduledExecutor();
+
+    public void startPeriodicStatusUpdate() {
+        // Mettre à jour les statuts toutes les 2 minutes
+        statusUpdateScheduler.scheduleAtFixedRate(() -> {
+            try {
+                if (!contacts.isEmpty()) {
+                    List<String> contactsList = List.copyOf(contacts);
+                    socketManager.batchCheckOnlineStatus(contactsList)
+                            .thenAccept(results -> {
+                                // Mettre à jour seulement si il y a des changements
+                                boolean hasChanges = results.entrySet().stream()
+                                        .anyMatch(entry -> {
+                                            Boolean cached = onlineStatusCache.get(entry.getKey());
+                                            return cached == null || !cached.equals(entry.getValue());
+                                        });
+
+                                if (hasChanges) {
+                                    onlineStatusCache.putAll(results);
+
+                                    // Rafraîchir l'UI sur le thread JavaFX
+                                    if (chatView != null) {
+                                        Platform.runLater(() -> chatView.updateContactList());
+                                    }
+                                }
+                            })
+                            .exceptionally(throwable -> {
+                                // Log silencieux pour éviter le spam
+                                return null;
+                            });
+                }
+            } catch (Exception e) {
+                // Log silencieux pour la mise à jour périodique
+            }
+        }, 30, 120, TimeUnit.SECONDS); // Démarrer après 30 secondes, puis toutes les 2 minutes
+    }
+
 
     /**
      * Enregistre un message reçu dans la base de données locale
@@ -757,6 +798,16 @@ public class ChatController {
      */
     public void disconnect() {
         try {
+            // Arrêter les tâches périodiques
+            statusUpdateScheduler.shutdown();
+            try {
+                if (!statusUpdateScheduler.awaitTermination(2, TimeUnit.SECONDS)) {
+                    statusUpdateScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                statusUpdateScheduler.shutdownNow();
+            }
+
             fileTransferExecutor.shutdownNow();
 
             // Arrêter le listener de messages avant de fermer la connexion
@@ -770,15 +821,13 @@ public class ChatController {
             } catch (Exception e) {
                 // Ignorer les erreurs lors de la déconnexion
             }
+
             // Fermer proprement les appels audio en cours
             if (audioCallManager != null) {
-                // S'assurer qu'aucun appel n'est en cours
                 if (audioCallManager.getCallStatus() != AudioCallManager.CallStatus.IDLE) {
                     audioCallManager.endCall();
                 }
             }
-
-            fileTransferExecutor.shutdownNow();
 
             // Fermer la connexion
             socketManager.closeConnection();
