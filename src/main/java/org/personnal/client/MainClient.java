@@ -42,12 +42,7 @@ public class MainClient extends Application {
         primaryStage.setMinHeight(MIN_HEIGHT);
         primaryStage.setResizable(true);
 
-        // Icône de l'application (à implémenter si vous avez une icône)
-        // primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/images/icon.png")));
-
-        // Afficher la vue de login par défaut
-        showLoginView();
-
+        // Créer la scène AVANT d'appeler showLoginView()
         Scene scene = new Scene(root, PREF_WIDTH, PREF_HEIGHT);
 
         // Appliquer les CSS globaux
@@ -73,8 +68,13 @@ public class MainClient extends Application {
             System.err.println("ATTENTION: Le fichier CSS des dialogues n'a pas pu être chargé");
         }
 
-        primaryStage.setTitle("Alanya - Connexion");
+        // Définir la scène sur le stage AVANT d'appeler showLoginView()
         primaryStage.setScene(scene);
+        primaryStage.setTitle("Alanya - Connexion");
+
+        // Maintenant appeler showLoginView()
+        showLoginView();
+
         primaryStage.centerOnScreen();
         primaryStage.show();
     }
@@ -92,7 +92,7 @@ public class MainClient extends Application {
         Scene currentScene = primaryStage.getScene();
         if (currentScene != null) {
             // Supprimer les CSS précédents sauf le global
-            currentScene.getStylesheets().clear();
+           // currentScene.getStylesheets().clear();
 
             // Ajouter les CSS appropriés
             URL globalCssUrl = getClass().getResource("/styles/global.css");
