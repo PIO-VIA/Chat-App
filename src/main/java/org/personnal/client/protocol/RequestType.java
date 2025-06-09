@@ -10,7 +10,5 @@ public enum RequestType {
     SEND_FILE,
     CHECK_USER,
     CHECK_ONLINE,
-    PING,        // Nouveau type pour les requêtes de ping servant à maintenir la connexion active
-    TYPING
 
 }
